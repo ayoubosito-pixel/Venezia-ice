@@ -35,7 +35,7 @@
 .q .n{width:38px;height:38px;border:2px solid var(--c);border-radius:9px;display:grid;place-items:center;font-weight:700;color:var(--c)}
 .q .m{flex:1;font-size:12px}.q .m small{color:var(--muted);display:block;margin-top:2px}
 .q .st{font-size:11px;color:var(--c);text-align:left}
-.q.o-new{--c:var(--acc)}.q.o-preparing{--c:#ffa722}.q.o-ready{--c:#3ddc6e}.q.o-served{--c:#777}
+.q.o-pending{--c:#ff4d4d}.q.o-new{--c:var(--acc)}.q.o-preparing{--c:#ffa722}.q.o-ready{--c:#3ddc6e}.q.o-served{--c:#777}
 .ql{max-height:300px;overflow:auto}
 .route{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 @media(max-width:700px){.route{grid-template-columns:1fr 1fr}}
@@ -80,6 +80,8 @@
  </div>
 </div></div>
 <div class="modal" id="md" onclick="if(event.target===this)this.classList.remove('on')"><div class="box" id="mb"></div></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="store.js"></script>
 <script>
 let mode = 'all', qf = 'all';
@@ -145,8 +147,8 @@ function openOrder(id) {
   const nx = { new: 'بدء التحضير', preparing: 'تحديد كجاهز', ready: 'تم التقديم' }[o.status];
   $('#mb').innerHTML = `<h3 style="margin-bottom:10px">طلب #${o.id} ${o.table ? '· طاولة ' + o.table : '· سفري'}</h3>
    ${o.items.map(i => `<div class="row"><span>${i.qty}× ${i.name}</span><span>${money(i.price * i.qty)}</span></div>`).join('')}
-   <div class="row" style="border-top:1px solid var(--bd);margin-top:6px;padding-top:8px"><b>${STATUS[o.status]} · ${o.paid ? 'مدفوع' : 'غير مدفوع'}</b><b>${money(o.total)}</b></div>
-   <div class="acts">${nx ? `<button class="btn" onclick="advance(${o.id});closeM()">${nx}</button>` : ''}${!o.paid ? `<button class="btn ghost" onclick="markPaid(${o.id});closeM()">تحصيل الدفع</button>` : ''}<button class="btn ghost" onclick="closeM()">إغلاق</button></div>`;
+   ${o.waiter ? `<div class="row"><span>النادل</span><span>${o.waiter}</span></div>` : ''}${o.payReq && !o.paid ? `<div class="row"><span>طلب دفع</span><b style="color:#7cc4ff">${o.payReq === 'cash' ? 'كاش' : 'بطاقة'}</b></div>` : ''}<div class="row" style="border-top:1px solid var(--bd);margin-top:6px;padding-top:8px"><b>${STATUS[o.status]} · ${o.paid ? 'مدفوع' : 'غير مدفوع'}</b><b>${money(o.total)}</b></div>
+   <div class="acts">${o.status === 'pending' ? `<button class="btn" onclick="acceptOrder(${o.id},'المدير');closeM()">قبول (كمدير)</button>` : ''}${nx ? `<button class="btn" onclick="advance(${o.id});closeM()">${nx}</button>` : ''}${!o.paid ? `<button class="btn ghost" onclick="markPaid(${o.id});closeM()">تحصيل الدفع</button>` : ''}<button class="btn ghost" onclick="closeM()">إغلاق</button></div>`;
   $('#md').classList.add('on');
 }
 function openTable(n) {

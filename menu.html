@@ -59,11 +59,13 @@ label{display:block;font-size:12px;color:#cfe;margin:12px 0 6px}
 </style></head>
 <body>
 <div id="app"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="store.js"></script>
 <script>
 const q = new URLSearchParams(location.search);
 const table = parseInt(q.get('table')) || null;
-let view = 'menu', cat = 'all', term = '', payTab = 'card', cart = {};
+let view = 'menu', cat = 'all', term = '', cart = {};
 try { cart = JSON.parse(sessionStorage.getItem('cart') || '{}'); } catch (e) {}
 let myOrder = parseInt(localStorage.getItem('myOrder_' + (table || 0))) || null;
 if (myOrder) view = 'track';
@@ -87,7 +89,7 @@ function nav() {
 function vMenu() {
   const list = MENU.filter(m => (cat === 'all' || m.cat === cat) && m.name.includes(term));
   return `<header><div class="ic">☰</div><span>${table ? 'طاولة ' + table : 'طلب سفري'}</span><div class="ic" onclick="go('cart')">🛒</div></header>
-  <span class="online">● متصل</span>
+  <span class="online">${cloudOn() ? '● متصل' : '● وضع محلي'}</span>
   <input class="search" placeholder="🔍 ابحث عن منتج..." value="${term}" oninput="term=this.value;render(true)">
   <div class="chips">${['all', ...Object.keys(CATS)].map(c => `<div class="chip ${cat === c ? 'on' : ''}" onclick="cat='${c}';render()">${c === 'all' ? 'الكل' : CATS[c]}</div>`).join('')}</div>
   <div class="grid">${list.map(m => `<div class="item"><div class="pic">${m.emoji}</div><div class="in"><b>${m.name}</b><div class="row"><span class="price">${money(m.price)}</span>${qtyCtl(m.id)}</div></div></div>`).join('') || '<div class="empty" style="grid-column:1/-1">لا توجد نتائج</div>'}</div>${nav()}`;
@@ -97,50 +99,51 @@ function vCart() {
   if (!it.length) return `<div class="page"><div class="title">مراجعة السلة</div><div class="empty">🛒<br>السلة فارغة</div></div>${nav()}`;
   return `<div class="page"><div class="row"><div class="title">مراجعة السلة</div><small style="color:var(--muted)">${count()} عناصر</small></div>
   ${it.map(i => `<div class="line"><div class="e">${i.emoji}</div><div class="nm"><b>${i.name}</b><br><small>${money(i.price)}</small><button class="rm" onclick="setQty(${i.id},-${i.qty})">حذف</button></div>${qtyCtl(i.id)}</div>`).join('')}
-  <div class="sum"><div class="row"><span>المجموع الفرعي</span><span>${money(sub())}</span></div><div class="row"><span>رسوم الخدمة</span><span>${money(FEE)}</span></div><div class="row t"><span>الإجمالي</span><span class="price">${money(sub() + FEE)}</span></div></div></div>
-  <div class="cta"><button class="btn" onclick="go('pay')">تأكيد الطلب ✓</button></div>`;
+  <div class="sum"><div class="row"><span>المجموع الفرعي</span><span>${money(sub())}</span></div><div class="row"><span>رسوم الخدمة</span><span>${money(FEE)}</span></div><div class="row t"><span>الإجمالي</span><span class="price">${money(sub() + FEE)}</span></div></div><div class="note" style="margin-top:12px">💡 الدفع يتم بعد انتهائك عبر النادل: كاش أو بجهاز البطاقة.</div></div>
+  <div class="cta"><button class="btn" onclick="sendOrder()">إرسال الطلب للنادل ✓</button></div>`;
 }
-function vPay() {
-  const tb = (k, l) => `<button class="${payTab === k ? 'on' : ''}" onclick="payTab='${k}';render()">${l}</button>`;
-  return `<div class="page"><div class="row"><button class="btn ghost" style="padding:6px 12px" onclick="go('cart')">→</button><b>الدفع</b><span></span></div>
-  <div class="row" style="margin-top:14px"><b>تأكيد والدفع</b><span style="font-size:12px;color:var(--muted)">3 / 3</span></div><div class="bar"><i style="width:100%"></i></div>
-  <div class="tot"><small style="color:var(--muted)">المبلغ الإجمالي</small><big>${money(sub() + FEE)}</big><small style="color:var(--acc)">🔒 معاملة مشفرة</small></div>
-  <label>طريقة الدفع</label><div class="tabs">${tb('card', '💳 بطاقة')}${tb('wallet', '👛 محفظة')}${tb('cash', '💵 كاش')}</div>
-  ${payTab === 'card' ? `<label>اسم حامل البطاقة</label><input id="cn" class="inp" placeholder="John Doe">
-  <label>رقم البطاقة</label><input id="cc" class="inp" inputmode="numeric" maxlength="19" placeholder="0000 0000 0000 0000" oninput="this.value=this.value.replace(/\\D/g,'').replace(/(.{4})/g,'$1 ').trim()">
-  <div class="two"><div><label>تاريخ الانتهاء</label><input id="ce" class="inp" maxlength="5" placeholder="MM/YY" oninput="this.value=this.value.replace(/\\D/g,'').replace(/^(\\d\\d)(\\d)/,'$1/$2')"></div><div><label>CVV</label><input id="cv" class="inp" maxlength="3" inputmode="numeric" placeholder="123"></div></div>`
-    : payTab === 'wallet' ? `<div class="note" style="margin-top:0">سيتم الخصم من رصيد محفظتك المحلية: <b style="color:var(--acc)">$124.50</b></div>`
-    : `<div class="note" style="margin-top:0">ادفع نقدًا عند استلام الطلب على الطاولة.</div>`}
-  <div class="note">🛡 بيانات الدفع مشفرة. هذا النموذج تجريبي ولا يتم إرسال أي بيانات لأي خادم.</div></div>
-  <div class="cta"><button class="btn" onclick="pay()">${payTab === 'cash' ? 'إرسال الطلب' : 'إتمام الدفع'} 🔒</button></div>`;
-}
-function pay() {
-  if (payTab === 'card') {
-    const ok = $('#cn').value.trim() && $('#cc').value.replace(/\s/g, '').length === 16 && /^\d\d\/\d\d$/.test($('#ce').value) && $('#cv').value.length === 3;
-    if (!ok) return toast('تحقق من بيانات البطاقة');
-  }
+function sendOrder() {
+  unlockAudio();
   const it = items().map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, st: i.st, cat: i.cat }));
-  const o = addOrder(table, it, payTab, !table);
-  myOrder = o.id; localStorage.setItem('myOrder_' + (table || 0), o.id);
-  cart = {}; sessionStorage.removeItem('cart'); go('track');
+  if (!it.length) return toast('السلة فارغة');
+  toast('جاري الإرسال...');
+  addOrder(table, it, o => {
+    if (!o) return toast('تعذر الإرسال، تحقق من الاتصال بالإنترنت');
+    myOrder = o.id; lastSt = null; localStorage.setItem('myOrder_' + (table || 0), o.id);
+    cart = {}; sessionStorage.removeItem('cart'); go('track');
+  });
 }
+let lastSt = null;
+function reqPay(id, m) { unlockAudio(); requestPay(id, m); toast(m === 'cash' ? 'تم إبلاغ النادل — جهّز المبلغ' : 'تم إبلاغ النادل — سيحضر جهاز الدفع'); render(); }
 function vTrack() {
   const s = load(); const o = s.orders.find(x => x.id === myOrder);
+  if (!o && !synced()) return `<div class="page"><div class="empty">⏳ جاري التحميل...</div></div>${nav()}`;
   if (!o) { myOrder = null; return `<div class="page"><div class="title">طلبي</div><div class="empty">📋<br>لا يوجد طلب نشط</div></div>${nav()}`; }
-  const order = ['new', 'preparing', 'ready', 'served'];
+  const order = ['pending', 'new', 'preparing', 'ready', 'served'];
   const idx = order.indexOf(o.status);
-  const lbl = ['تم استلام الطلب', 'جاري التحضير 👨‍🍳', 'الطلب جاهز', 'تم التقديم — بالهنا!'];
+  if (lastSt !== null && lastSt !== o.status) {
+    if (o.status === 'new') toast('النادل ' + (o.waiter || '') + ' استلم طلبك ✅');
+    if (o.status === 'ready') { alertUser('طلبك جاهز، النادل في الطريق إليك'); toast('🎉 طلبك جاهز'); }
+  }
+  lastSt = o.status;
+  const lbl = ['تم إرسال الطلب — بانتظار النادل', 'النادل ' + (o.waiter || '') + ' استلم طلبك', 'جاري التحضير 👨‍🍳', 'طلبك جاهز — النادل في الطريق إليك', 'تم التقديم — بالهنا!'];
+  let pay = '';
+  if (o.paid) pay = `<div class="note" style="color:var(--acc)">✅ تم الدفع، شكرًا لزيارتكم</div>`;
+  else if (o.payReq) pay = `<div class="note">⏳ تم إبلاغ النادل — ${o.payReq === 'cash' ? 'جهّز المبلغ نقدًا' : 'سيحضر النادل جهاز الدفع بالبطاقة'}</div>`;
+  else if (o.status === 'ready' || o.status === 'served') pay = `<div class="title" style="font-size:16px;margin-top:18px">انتهيت؟ اطلب الحساب</div><div class="two"><button class="btn" onclick="reqPay(${o.id},'cash')">💵 كاش</button><button class="btn" onclick="reqPay(${o.id},'card')">💳 بطاقة</button></div>`;
   return `<div class="page"><div class="title">طلب #${o.id} ${o.table ? '· طاولة ' + o.table : '· سفري'}</div>
   <div class="steps">${lbl.map((l, i) => `<div class="stp ${i <= idx ? 'on' : ''}"><div class="c">${i <= idx ? '✓' : i + 1}</div><div><b>${l}</b></div></div>`).join('')}</div>
-  <div class="sum">${o.items.map(i => `<div class="row"><span>${i.qty}× ${i.name}</span><span>${money(i.price * i.qty)}</span></div>`).join('')}<div class="row t"><span>${o.paid ? 'مدفوع ✓' : 'الدفع عند الاستلام'}</span><span class="price">${money(o.total + FEE)}</span></div></div>
-  <button class="btn" style="width:100%;margin-top:14px" onclick="newOrder()">طلب جديد</button></div>${nav()}`;
+  <div class="sum">${o.items.map(i => `<div class="row"><span>${i.qty}× ${i.name}</span><span>${money(i.price * i.qty)}</span></div>`).join('')}<div class="row t"><span>الإجمالي (مع الخدمة)</span><span class="price">${money(o.total + FEE)}</span></div></div>
+  ${pay}
+  ${o.paid && o.status === 'served' ? `<button class="btn" style="width:100%;margin-top:14px" onclick="newOrder()">طلب جديد</button>` : ''}</div>${nav()}`;
 }
 function newOrder() { localStorage.removeItem('myOrder_' + (table || 0)); myOrder = null; go('menu'); }
 function render(keepFocus) {
   const a = $('#app'); const f = document.activeElement && document.activeElement.className === 'search';
-  a.innerHTML = { menu: vMenu, cart: vCart, pay: vPay, track: vTrack }[view]();
+  a.innerHTML = { menu: vMenu, cart: vCart, track: vTrack }[view]();
   if (f) { const i = $('.search'); i.focus(); i.setSelectionRange(term.length, term.length); }
 }
 render();
-onChange(() => { if (view === 'track') render(); });
+onChange(() => { if (view === 'track') render(); }, 1500);
+document.addEventListener('click', () => unlockAudio(), { once: true });
 </script></body></html>

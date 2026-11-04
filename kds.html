@@ -22,12 +22,14 @@
 .empty{color:var(--muted);text-align:center;padding:40px 0;font-size:13px}
 </style></head><body>
 <div class="hd"><a href="dashboard.html" style="font-size:20px">←</a><h1>KDS — شاشة المطبخ</h1>
- <div class="flt" id="fl"></div><div class="sp"></div><span id="clk" style="color:var(--muted)"></span></div>
+ <div class="flt" id="fl"></div><div class="sp"></div><button class="btn" id="snd" onclick="unlockAudio();beep(1);this.textContent='🔔 الصوت مفعّل'">🔔 تفعيل الصوت</button><span id="clk" style="color:var(--muted)"></span></div>
 <div class="cols">
  <div class="col"><h2>قيد الانتظار <span id="c1">0</span></h2><div id="p1"></div></div>
  <div class="col"><h2>قيد التحضير <span id="c2">0</span></h2><div id="p2"></div></div>
  <div class="col"><h2>جاهز <span id="c3">0</span></h2><div id="p3"></div></div>
 </div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="store.js"></script>
 <script>
 let st = 'all'; const $ = s => document.querySelector(s);
@@ -35,20 +37,21 @@ function card(o, kind) {
   const min = Math.floor((Date.now() - o.t) / 60000);
   const cls = kind === 'ready' ? 'a-done' : min >= 15 ? 'a-late' : min >= 8 ? 'a-warn' : 'a-ok';
   const its = o.items.filter(i => st === 'all' || i.st === st);
-  const act = { new: 'اضغط لبدء التحضير', preparing: 'اضغط عند الانتهاء', ready: 'اضغط عند التقديم' }[o.status];
-  return `<div class="k ${cls}" onclick="advance(${o.id});draw()"><div class="h"><span>${o.table ? 'طاولة ' + o.table : 'سفري'} · #${o.id}</span><span>${kind === 'ready' ? '✓' : mmss(Date.now() - o.t)}</span></div>
-  <div class="b">${its.map(i => `${i.qty}× ${i.name}`).join('<br>')}</div><div class="f">${min >= 15 && kind !== 'ready' ? '⚠ متأخر — ' : ''}${act}</div></div>`;
+  const act = { new: 'اضغط لبدء التحضير', preparing: 'اضغط عند الانتهاء', ready: 'جاهز — بانتظار النادل ' + (o.waiter || '') }[o.status];
+  return `<div class="k ${cls}" ${o.status === 'ready' ? '' : `onclick="advance(${o.id});draw()"`}><div class="h"><span>${o.table ? 'طاولة ' + o.table : 'سفري'} · #${o.id}</span><span>${kind === 'ready' ? '✓' : mmss(Date.now() - o.t)}</span></div>
+  <div class="b"><div style="font-size:12px;opacity:.65">النادل: ${o.waiter || '—'}</div>${its.map(i => `${i.qty}× ${i.name}`).join('<br>')}</div><div class="f">${min >= 15 && kind !== 'ready' ? '⚠ متأخر — ' : ''}${act}</div></div>`;
 }
 function draw() {
   const s = load();
   $('#fl').innerHTML = [['all', 'الكل'], ...Object.entries(STATIONS)].map(([k, l]) => `<button class="${st === k ? 'on' : ''}" onclick="st='${k}';draw()">${l}</button>`).join('');
-  const act = s.orders.filter(o => o.status !== 'served' && o.items.some(i => st === 'all' || i.st === st)).sort((a, b) => a.t - b.t);
+  const act = s.orders.filter(o => o.status !== 'served' && o.status !== 'pending' && o.items.some(i => st === 'all' || i.st === st)).sort((a, b) => a.t - b.t);
   [['new', 1], ['preparing', 2], ['ready', 3]].forEach(([k, n]) => {
     const l = act.filter(o => o.status === k);
     $('#c' + n).textContent = l.length;
     $('#p' + n).innerHTML = l.map(o => card(o, k)).join('') || '<div class="empty">لا توجد طلبات</div>';
   });
-  $('#clk').textContent = new Date().toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' });
+  $('#clk').textContent = (cloudOn() ? '☁️ ' : '⚠️ محلي ') + new Date().toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' });
 }
 draw(); onChange(draw); setInterval(draw, 1000);
+watchEvents(e => { if (e.type === 'accepted') alertUser('طلب جديد للمطبخ، ' + (e.table ? 'طاولة ' + e.table : 'سفري')); draw(); }, 1500);
 </script></body></html>
