@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>طاولات سمارت — الرئيسية</title>
+<link rel="stylesheet" href="shared.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{--bg:#121110;--card:#1b1917;--bd:#2c2926;--tx:#f1ece6;--acc:#ff6a1a}
+.w{max-width:1000px;margin:0 auto;padding:24px 16px}
+h1{font-size:28px;margin-bottom:6px}p.s{color:var(--muted);margin-bottom:20px}
+.links{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:28px}
+.links a{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:18px;display:block}
+.links a:hover{border-color:var(--acc)}.links b{display:block;font-size:17px;margin:6px 0 4px}.links span{font-size:12px;color:var(--muted)}
+.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.inp{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px;min-width:260px;direction:ltr;outline:none}
+.qrs{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
+.qc{background:#fff;color:#111;border-radius:14px;padding:14px;text-align:center}
+.qc h4{margin-bottom:8px}.qc .q{display:grid;place-items:center}.qc small{display:block;font-size:10px;color:#666;margin-top:6px}
+@media print{.noprint{display:none}body{background:#fff}.w{padding:0}.qc{break-inside:avoid;border:1px solid #ccc}}
+</style></head><body><div class="w">
+<div class="noprint"><h1>🍽 طاولات سمارت</h1><p class="s">اطلب بمسح الكود الموجود على الطاولة — بدون تطبيق وبدون انتظار.</p>
+<div class="links">
+ <a href="menu.html?table=1"><span>📱 العميل</span><b>قائمة الطلب</b><span>تجربة ما بعد مسح الـ QR</span></a>
+ <a href="dashboard.html"><span>▦ الإدارة</span><b>اللوحة المباشرة</b><span>خريطة الصالة وطابور الطلبات</span></a>
+ <a href="kds.html"><span>👨‍🍳 المطبخ</span><b>شاشة KDS</b><span>انتظار / تحضير / جاهز</span></a>
+ <a href="reports.html"><span>📊 المدير</span><b>التقارير</b><span>المبيعات والأكثر طلبًا</span></a>
+</div>
+<h2 style="margin-bottom:10px">أكواد الطاولات (QR)</h2>
+<div class="bar"><input class="inp" id="base" placeholder="رابط موقعك بعد النشر مثل https://my-cafe.com/"><button class="btn" onclick="gen()">توليد</button><button class="btn ghost" onclick="window.print()">🖨 طباعة</button></div>
+<p class="s" style="font-size:12px">ملاحظة: بعد رفع المشروع على استضافة (Netlify / GitHub Pages…) ضع رابط المجلد هنا ثم اطبع الأكواد وألصقها على الطاولات.</p></div>
+<div class="qrs" id="qrs"></div></div>
+<script>
+const base0 = location.href.replace(/index\.html.*$/, '').replace(/[?#].*$/, '');
+document.getElementById('base').value = base0;
+function gen() {
+  let b = document.getElementById('base').value.trim(); if (!b.endsWith('/')) b += '/';
+  const box = document.getElementById('qrs'); box.innerHTML = '';
+  for (let i = 1; i <= 12; i++) {
+    const url = b + 'menu.html?table=' + i;
+    const d = document.createElement('div'); d.className = 'qc';
+    d.innerHTML = `<h4>طاولة ${i}</h4><div class="q"></div><small>امسح للطلب</small>`;
+    box.appendChild(d);
+    try { new QRCode(d.querySelector('.q'), { text: url, width: 130, height: 130 }); } catch (e) { d.querySelector('.q').textContent = url; }
+  }
+}
+gen();
+</script></body></html>

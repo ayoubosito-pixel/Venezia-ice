@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>قائمة الطاولة</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+:root{--bg:#0e1712;--card:#15241b;--bd:#1f3a2a;--tx:#eafaf0;--acc:#1fe35f;--card2:#1b2f23}
+body{display:flex;justify-content:center}
+#app{width:100%;max-width:440px;min-height:100vh;display:flex;flex-direction:column;position:relative}
+header{display:flex;align-items:center;justify-content:space-between;padding:16px 16px 6px;font-weight:700}
+header .ic{width:34px;height:34px;display:grid;place-items:center;background:var(--card);border-radius:10px;cursor:pointer}
+.online{display:block;width:max-content;margin:0 auto 10px;background:rgba(31,227,95,.12);color:var(--acc);font-size:11px;padding:3px 12px;border-radius:99px}
+.search{margin:0 16px 12px;background:var(--card2);border:1px solid var(--bd);border-radius:12px;padding:12px;width:calc(100% - 32px);outline:none}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:0 16px 12px;scrollbar-width:none}
+.chip{background:var(--card2);padding:8px 18px;border-radius:99px;white-space:nowrap;font-size:13px}
+.chip.on{background:var(--acc);color:#04210f;font-weight:700}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 90px}
+.item{background:var(--card);border:1px solid var(--bd);border-radius:14px;overflow:hidden}
+.pic{height:110px;display:grid;place-items:center;font-size:54px;background:radial-gradient(circle at 50% 40%,#2a4a37,#12201a)}
+.item .in{padding:9px 10px;display:flex;flex-direction:column;gap:6px}
+.item b{font-size:14px}
+.row{display:flex;justify-content:space-between;align-items:center}
+.price{color:var(--acc);font-weight:700;font-size:14px}
+.qty{display:flex;align-items:center;gap:6px;background:#0f1d15;border-radius:99px;padding:3px}
+.qty button{width:24px;height:24px;border-radius:50%;background:#2a4636;color:#fff;font-weight:700}
+.qty button.p{background:var(--acc);color:#04210f}
+.qty span{min-width:14px;text-align:center;font-size:13px}
+nav.bot{position:fixed;bottom:0;width:100%;max-width:440px;background:#0b140f;border-top:1px solid var(--bd);display:flex;justify-content:space-around;padding:8px 0 12px}
+nav.bot button{background:none;color:var(--muted);font-size:11px;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative}
+nav.bot button.on{color:var(--acc)}nav.bot i{font-style:normal;font-size:20px}
+.badge{position:absolute;top:-4px;left:-8px;background:var(--acc);color:#04210f;border-radius:99px;font-size:10px;padding:0 5px;font-weight:700}
+.page{padding:6px 16px 120px}
+.title{font-size:20px;font-weight:700;margin:6px 0 14px}
+.line{display:flex;gap:12px;align-items:center;background:var(--card);border:1px solid var(--bd);padding:10px;border-radius:14px;margin-bottom:10px}
+.line .e{font-size:34px;width:54px;height:54px;border-radius:10px;display:grid;place-items:center;background:#0f1d15}
+.line .nm{flex:1}.line small{color:var(--acc)}
+.rm{color:#ff6b6b;font-size:11px;background:none;display:block;margin-top:4px}
+.sum{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-top:6px}
+.sum .row{padding:4px 0;color:#bcd}.sum .t{color:var(--tx);font-weight:700;font-size:17px;border-top:1px solid var(--bd);margin-top:6px;padding-top:10px}
+.cta{position:fixed;bottom:0;width:100%;max-width:440px;padding:12px 16px 16px;background:linear-gradient(transparent,var(--bg) 30%)}
+.cta .btn{width:100%;font-size:16px;padding:15px;border-radius:14px;display:block}
+.tabs{display:flex;background:var(--card2);border-radius:12px;padding:4px;margin-bottom:14px}
+.tabs button{flex:1;background:none;padding:10px;border-radius:9px;font-size:13px}.tabs button.on{background:#0b140f;border:1px solid var(--bd)}
+label{display:block;font-size:12px;color:#cfe;margin:12px 0 6px}
+.inp{width:100%;background:var(--card2);border:1px solid var(--bd);border-radius:12px;padding:13px;outline:none;direction:ltr;text-align:left}
+.inp:focus{border-color:var(--acc)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bar{height:5px;background:#1b2f23;border-radius:9px;overflow:hidden;margin:8px 0 14px}.bar i{display:block;height:100%;background:var(--acc)}
+.tot{background:var(--card2);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:6px}
+.tot big{font-size:26px;font-weight:800;display:block;direction:ltr;text-align:right}
+.note{border:1px dashed var(--bd);border-radius:12px;padding:12px;font-size:12px;color:#9ab;margin-top:16px}
+.steps{display:flex;flex-direction:column;gap:0;margin:18px 6px}
+.stp{display:flex;gap:12px;align-items:flex-start;padding-bottom:20px;position:relative;color:var(--muted)}
+.stp:not(:last-child)::before{content:'';position:absolute;right:11px;top:24px;bottom:0;width:2px;background:var(--bd)}
+.stp .c{width:24px;height:24px;border-radius:50%;background:var(--bd);display:grid;place-items:center;font-size:12px;z-index:1}
+.stp.on{color:var(--tx)}.stp.on .c{background:var(--acc);color:#04210f}
+.empty{text-align:center;color:var(--muted);padding:60px 0}
+.toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:var(--acc);color:#04210f;padding:9px 18px;border-radius:99px;font-weight:700;font-size:13px;z-index:9}
+</style></head>
+<body>
+<div id="app"></div>
+<script src="store.js"></script>
+<script>
+const q = new URLSearchParams(location.search);
+const table = parseInt(q.get('table')) || null;
+let view = 'menu', cat = 'all', term = '', payTab = 'card', cart = {};
+try { cart = JSON.parse(sessionStorage.getItem('cart') || '{}'); } catch (e) {}
+let myOrder = parseInt(localStorage.getItem('myOrder_' + (table || 0))) || null;
+if (myOrder) view = 'track';
+const $ = s => document.querySelector(s);
+const items = () => Object.entries(cart).filter(([, v]) => v > 0).map(([id, qty]) => { const m = MENU.find(x => x.id == id); return { ...m, qty }; });
+const count = () => items().reduce((a, i) => a + i.qty, 0);
+const sub = () => items().reduce((a, i) => a + i.price * i.qty, 0);
+const FEE = 0.5;
+function setQty(id, d) { cart[id] = Math.max(0, (cart[id] || 0) + d); sessionStorage.setItem('cart', JSON.stringify(cart)); render(); }
+function go(v) { view = v; render(); scrollTo(0, 0); }
+function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 1800); }
+
+function qtyCtl(id) {
+  const n = cart[id] || 0;
+  return `<div class="qty"><button class="p" onclick="setQty(${id},1)">+</button>${n ? `<span>${n}</span><button onclick="setQty(${id},-1)">−</button>` : ''}</div>`;
+}
+function nav() {
+  const b = (v, i, t, extra = '') => `<button class="${view === v ? 'on' : ''}" onclick="go('${v}')"><i>${i}</i>${t}${extra}</button>`;
+  return `<nav class="bot">${b('menu', '🏠', 'القائمة')}${b('cart', '🛒', 'السلة', count() ? `<span class="badge">${count()}</span>` : '')}${b('track', '📋', 'طلبي')}</nav>`;
+}
+function vMenu() {
+  const list = MENU.filter(m => (cat === 'all' || m.cat === cat) && m.name.includes(term));
+  return `<header><div class="ic">☰</div><span>${table ? 'طاولة ' + table : 'طلب سفري'}</span><div class="ic" onclick="go('cart')">🛒</div></header>
+  <span class="online">● متصل</span>
+  <input class="search" placeholder="🔍 ابحث عن منتج..." value="${term}" oninput="term=this.value;render(true)">
+  <div class="chips">${['all', ...Object.keys(CATS)].map(c => `<div class="chip ${cat === c ? 'on' : ''}" onclick="cat='${c}';render()">${c === 'all' ? 'الكل' : CATS[c]}</div>`).join('')}</div>
+  <div class="grid">${list.map(m => `<div class="item"><div class="pic">${m.emoji}</div><div class="in"><b>${m.name}</b><div class="row"><span class="price">${money(m.price)}</span>${qtyCtl(m.id)}</div></div></div>`).join('') || '<div class="empty" style="grid-column:1/-1">لا توجد نتائج</div>'}</div>${nav()}`;
+}
+function vCart() {
+  const it = items();
+  if (!it.length) return `<div class="page"><div class="title">مراجعة السلة</div><div class="empty">🛒<br>السلة فارغة</div></div>${nav()}`;
+  return `<div class="page"><div class="row"><div class="title">مراجعة السلة</div><small style="color:var(--muted)">${count()} عناصر</small></div>
+  ${it.map(i => `<div class="line"><div class="e">${i.emoji}</div><div class="nm"><b>${i.name}</b><br><small>${money(i.price)}</small><button class="rm" onclick="setQty(${i.id},-${i.qty})">حذف</button></div>${qtyCtl(i.id)}</div>`).join('')}
+  <div class="sum"><div class="row"><span>المجموع الفرعي</span><span>${money(sub())}</span></div><div class="row"><span>رسوم الخدمة</span><span>${money(FEE)}</span></div><div class="row t"><span>الإجمالي</span><span class="price">${money(sub() + FEE)}</span></div></div></div>
+  <div class="cta"><button class="btn" onclick="go('pay')">تأكيد الطلب ✓</button></div>`;
+}
+function vPay() {
+  const tb = (k, l) => `<button class="${payTab === k ? 'on' : ''}" onclick="payTab='${k}';render()">${l}</button>`;
+  return `<div class="page"><div class="row"><button class="btn ghost" style="padding:6px 12px" onclick="go('cart')">→</button><b>الدفع</b><span></span></div>
+  <div class="row" style="margin-top:14px"><b>تأكيد والدفع</b><span style="font-size:12px;color:var(--muted)">3 / 3</span></div><div class="bar"><i style="width:100%"></i></div>
+  <div class="tot"><small style="color:var(--muted)">المبلغ الإجمالي</small><big>${money(sub() + FEE)}</big><small style="color:var(--acc)">🔒 معاملة مشفرة</small></div>
+  <label>طريقة الدفع</label><div class="tabs">${tb('card', '💳 بطاقة')}${tb('wallet', '👛 محفظة')}${tb('cash', '💵 كاش')}</div>
+  ${payTab === 'card' ? `<label>اسم حامل البطاقة</label><input id="cn" class="inp" placeholder="John Doe">
+  <label>رقم البطاقة</label><input id="cc" class="inp" inputmode="numeric" maxlength="19" placeholder="0000 0000 0000 0000" oninput="this.value=this.value.replace(/\\D/g,'').replace(/(.{4})/g,'$1 ').trim()">
+  <div class="two"><div><label>تاريخ الانتهاء</label><input id="ce" class="inp" maxlength="5" placeholder="MM/YY" oninput="this.value=this.value.replace(/\\D/g,'').replace(/^(\\d\\d)(\\d)/,'$1/$2')"></div><div><label>CVV</label><input id="cv" class="inp" maxlength="3" inputmode="numeric" placeholder="123"></div></div>`
+    : payTab === 'wallet' ? `<div class="note" style="margin-top:0">سيتم الخصم من رصيد محفظتك المحلية: <b style="color:var(--acc)">$124.50</b></div>`
+    : `<div class="note" style="margin-top:0">ادفع نقدًا عند استلام الطلب على الطاولة.</div>`}
+  <div class="note">🛡 بيانات الدفع مشفرة. هذا النموذج تجريبي ولا يتم إرسال أي بيانات لأي خادم.</div></div>
+  <div class="cta"><button class="btn" onclick="pay()">${payTab === 'cash' ? 'إرسال الطلب' : 'إتمام الدفع'} 🔒</button></div>`;
+}
+function pay() {
+  if (payTab === 'card') {
+    const ok = $('#cn').value.trim() && $('#cc').value.replace(/\s/g, '').length === 16 && /^\d\d\/\d\d$/.test($('#ce').value) && $('#cv').value.length === 3;
+    if (!ok) return toast('تحقق من بيانات البطاقة');
+  }
+  const it = items().map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, st: i.st, cat: i.cat }));
+  const o = addOrder(table, it, payTab, !table);
+  myOrder = o.id; localStorage.setItem('myOrder_' + (table || 0), o.id);
+  cart = {}; sessionStorage.removeItem('cart'); go('track');
+}
+function vTrack() {
+  const s = load(); const o = s.orders.find(x => x.id === myOrder);
+  if (!o) { myOrder = null; return `<div class="page"><div class="title">طلبي</div><div class="empty">📋<br>لا يوجد طلب نشط</div></div>${nav()}`; }
+  const order = ['new', 'preparing', 'ready', 'served'];
+  const idx = order.indexOf(o.status);
+  const lbl = ['تم استلام الطلب', 'جاري التحضير 👨‍🍳', 'الطلب جاهز', 'تم التقديم — بالهنا!'];
+  return `<div class="page"><div class="title">طلب #${o.id} ${o.table ? '· طاولة ' + o.table : '· سفري'}</div>
+  <div class="steps">${lbl.map((l, i) => `<div class="stp ${i <= idx ? 'on' : ''}"><div class="c">${i <= idx ? '✓' : i + 1}</div><div><b>${l}</b></div></div>`).join('')}</div>
+  <div class="sum">${o.items.map(i => `<div class="row"><span>${i.qty}× ${i.name}</span><span>${money(i.price * i.qty)}</span></div>`).join('')}<div class="row t"><span>${o.paid ? 'مدفوع ✓' : 'الدفع عند الاستلام'}</span><span class="price">${money(o.total + FEE)}</span></div></div>
+  <button class="btn" style="width:100%;margin-top:14px" onclick="newOrder()">طلب جديد</button></div>${nav()}`;
+}
+function newOrder() { localStorage.removeItem('myOrder_' + (table || 0)); myOrder = null; go('menu'); }
+function render(keepFocus) {
+  const a = $('#app'); const f = document.activeElement && document.activeElement.className === 'search';
+  a.innerHTML = { menu: vMenu, cart: vCart, pay: vPay, track: vTrack }[view]();
+  if (f) { const i = $('.search'); i.focus(); i.setSelectionRange(term.length, term.length); }
+}
+render();
+onChange(() => { if (view === 'track') render(); });
+</script></body></html>

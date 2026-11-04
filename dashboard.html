@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>لوحة الطاولات المباشرة</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+:root{--bg:#121110;--card:#1b1917;--bd:#2c2926;--tx:#f1ece6;--acc:#ff6a1a}
+.top{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+.top h1{font-size:20px}.top h1::after{content:'';display:inline-block;width:8px;height:8px;background:var(--acc);border-radius:50%;margin-right:6px;animation:b 1.4s infinite}
+@keyframes b{50%{opacity:.2}}
+.seg{display:flex;background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:3px}
+.seg button{background:none;padding:7px 16px;border-radius:8px;font-size:13px;color:var(--muted)}.seg button.on{background:#2a1a10;color:var(--acc);border:1px solid var(--acc)}
+.sp{flex:1}
+.srch{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:9px 12px;min-width:200px;outline:none}
+.grid{display:grid;grid-template-columns:200px 1fr 250px;gap:14px;align-items:start}
+@media(max-width:1150px){.grid{grid-template-columns:1fr 1fr}.grid>.col{grid-column:1/-1}}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.col{display:flex;flex-direction:column;gap:14px}
+.ctr{display:flex;flex-direction:column;gap:14px}
+.mid{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+@media(max-width:900px){.mid{grid-template-columns:1fr}}
+.leg div{display:flex;align-items:center;justify-content:space-between;padding:7px 0;font-size:13px}
+.leg .dot{width:14px;height:14px;margin:0 0 0 8px}
+.perf div{padding:7px 0;font-size:12px;color:var(--muted)}.perf b{display:block;color:var(--tx);font-size:18px}.perf em{float:left;font-style:normal;color:var(--ok);font-size:12px}
+.map{position:relative;height:340px;background:#0f0e0d;border:1px solid var(--bd);border-radius:12px;overflow:hidden}
+.t{position:absolute;width:62px;height:62px;border:2px solid var(--c);border-radius:14px;display:grid;place-items:center;text-align:center;font-weight:700;cursor:pointer;background:rgba(0,0,0,.3);color:var(--tx);font-size:15px;transition:.2s}
+.t.round{border-radius:50%}
+.t small{display:block;font-size:10px;color:var(--c);font-weight:600}
+.t:hover{transform:scale(1.07);background:color-mix(in srgb,var(--c) 15%,transparent)}
+.t.s-available{opacity:.9}
+.lg{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:10px}.lg .dot{margin-left:4px;width:7px;height:7px}
+.tabs2{display:flex;gap:6px;margin-bottom:10px}.tabs2 button{background:#2a2623;color:var(--muted);padding:5px 12px;border-radius:8px;font-size:12px}.tabs2 .on{background:var(--acc);color:#111}
+.q{display:flex;align-items:center;gap:10px;background:#201d1b;border:1px solid var(--bd);border-radius:10px;padding:9px;margin-bottom:8px;cursor:pointer}
+.q:hover{border-color:var(--acc)}
+.q .n{width:38px;height:38px;border:2px solid var(--c);border-radius:9px;display:grid;place-items:center;font-weight:700;color:var(--c)}
+.q .m{flex:1;font-size:12px}.q .m small{color:var(--muted);display:block;margin-top:2px}
+.q .st{font-size:11px;color:var(--c);text-align:left}
+.q.o-new{--c:var(--acc)}.q.o-preparing{--c:#ffa722}.q.o-ready{--c:#3ddc6e}.q.o-served{--c:#777}
+.ql{max-height:300px;overflow:auto}
+.route{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:700px){.route{grid-template-columns:1fr 1fr}}
+.r{background:#201d1b;border:1px solid var(--bd);border-radius:12px;padding:12px}
+.r b{display:flex;justify-content:space-between;align-items:center;font-size:13px}.r b span{background:var(--acc);color:#111;border-radius:6px;padding:0 7px;font-size:12px}
+.r small{display:block;color:var(--muted);font-size:11px;margin:8px 0 5px}.pr{height:4px;background:#332f2b;border-radius:9px;overflow:hidden}.pr i{display:block;height:100%;background:var(--acc)}
+.tm{display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:12px}
+.tm .n{border:2px solid var(--c);color:var(--c);border-radius:8px;width:40px;height:34px;display:grid;place-items:center;font-weight:700;font-size:11px}
+.tm .b{flex:1}.tm .pr i{background:var(--c)}
+.nt{display:flex;gap:8px;font-size:12px;padding:8px 0;border-bottom:1px solid var(--bd)}.nt:last-child{border:0}.nt .dot{margin:5px 0 0}.nt small{color:var(--muted);margin-right:auto;white-space:nowrap}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:20}.modal.on{display:grid}
+.box{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:18px;width:min(380px,92vw)}
+.box .row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
+</style></head>
+<body>
+<div class="app">
+<nav class="side"><a href="index.html" title="الرئيسية">☰</a><a class="on" href="dashboard.html" title="مباشر">▦</a><a href="kds.html" title="المطبخ">👨‍🍳</a><a href="reports.html" title="التقارير">📊</a><a href="menu.html?table=1" title="قائمة العميل">📱</a></nav>
+<div class="main">
+ <div class="top"><h1>مباشر</h1>
+  <div class="seg"><button id="m-all" class="on" onclick="mode='all';draw()">الكل</button><button id="m-din" onclick="mode='din';draw()">داخل المطعم</button><button id="m-tk" onclick="mode='tk';draw()">سفري</button></div>
+  <div class="sp"></div><input class="srch" id="sr" placeholder="🔍 ابحث عن طاولة أو طلب..." oninput="draw()">
+  <button class="btn ghost" onclick="seedDemo();draw()">بيانات تجريبية</button>
+  <button class="btn ghost" onclick="if(confirm('مسح كل البيانات؟')){resetAll();draw()}">مسح</button></div>
+ <div class="grid">
+  <div class="col">
+   <div class="card leg"><h3>نشاط الطاولات</h3><div id="act"></div></div>
+   <div class="card perf"><h3>الأداء</h3><div id="perf"></div></div>
+  </div>
+  <div class="ctr">
+   <div class="mid">
+    <div class="card"><h3>خريطة الصالة</h3><div class="map" id="map"></div>
+     <div class="lg"><span><i class="dot s-available" style="background:var(--ok)"></i>متاحة</span><span><i class="dot" style="background:#ff6a1a"></i>مشغولة</span><span><i class="dot" style="background:#ffa722"></i>قيد التحضير</span><span><i class="dot" style="background:#3ddc6e"></i>جاهزة</span><span><i class="dot" style="background:#a8a8a8"></i>تنظيف</span></div></div>
+    <div class="card"><h3>طابور الطلبات المباشر</h3><div class="tabs2" id="qt"></div><div class="ql" id="ql"></div></div>
+   </div>
+   <div class="card"><h3>توجيه المطبخ</h3><div class="route" id="route"></div></div>
+  </div>
+  <div class="col">
+   <div class="card"><h3>مؤقتات الطلبات</h3><div id="tmr"></div></div>
+   <div class="card"><h3>الإشعارات</h3><div id="nts"></div></div>
+  </div>
+ </div>
+</div></div>
+<div class="modal" id="md" onclick="if(event.target===this)this.classList.remove('on')"><div class="box" id="mb"></div></div>
+<script src="store.js"></script>
+<script>
+let mode = 'all', qf = 'all';
+const POS = [[8,8],[27,8],[46,8],[65,8],[8,36],[27,60],[46,36],[65,60],[8,64],[27,36],[46,64],[65,36]];
+const COL = { available: '#2fd16a', occupied: '#ff6a1a', preparing: '#ffa722', ready: '#3ddc6e', cleaning: '#a8a8a8' };
+const NL = { available: 'متاحة', occupied: 'مشغولة', preparing: 'قيد التحضير', ready: 'جاهزة', cleaning: 'تنظيف' };
+const $ = s => document.querySelector(s);
+const active = s => s.orders.filter(o => o.status !== 'served');
+function oldest(s, n) { const a = s.orders.filter(o => o.table === n && o.status !== 'served').sort((x, y) => x.t - y.t)[0]; return a; }
+
+function draw() {
+  const s = load(), term = $('#sr').value.trim();
+  ['all', 'din', 'tk'].forEach(k => $('#m-' + k).classList.toggle('on', mode === k));
+  // table activity
+  const cnt = {}; for (let n = 1; n <= TABLES; n++) { const st = tableStatus(n, s); cnt[st] = (cnt[st] || 0) + 1; }
+  $('#act').innerHTML = Object.keys(NL).map(k => `<div><span><i class="dot" style="background:${COL[k]}"></i>${NL[k]}</span><b>${cnt[k] || 0}</b></div>`).join('');
+  // performance
+  const done = s.orders.filter(o => o.tReady || o.tDone);
+  const prep = done.filter(o => o.tStart && o.tReady).map(o => o.tReady - o.tStart);
+  const avg = prep.length ? Math.round(prep.reduce((a, b) => a + b, 0) / prep.length / 60000) : 0;
+  const hr = s.orders.filter(o => Date.now() - o.t < 3600e3).length;
+  $('#perf').innerHTML = `<div>متوسط وقت التحضير<b>${avg} د</b></div><div>طلبات / ساعة<b>${hr}</b></div><div>دوران الطاولات<b>${(s.orders.filter(o => o.status === 'served' && o.table).length / TABLES).toFixed(1)}x</b></div>`;
+  // map
+  $('#map').innerHTML = Array.from({ length: TABLES }, (_, i) => {
+    const n = i + 1, st = tableStatus(n, s), o = oldest(s, n), p = POS[i];
+    const hide = term && !String(n).includes(term) ? 'opacity:.2;' : '';
+    const sub = o ? `<small>${Math.floor((Date.now() - o.t) / 60000)}د</small>` : '';
+    return `<div class="t s-${st} ${n === 12 ? 'round' : ''}" style="${hide}right:${p[0]}%;top:${p[1]}%" onclick="openTable(${n})">${String(n).padStart(2, '0')}${sub}</div>`;
+  }).join('');
+  // queue
+  const filt = [['all', 'الكل'], ['din', 'داخل'], ['tk', 'سفري']];
+  $('#qt').innerHTML = filt.map(([k, l]) => `<button class="${qf === k ? 'on' : ''}" onclick="qf='${k}';draw()">${l}</button>`).join('');
+  let list = active(s).sort((a, b) => a.t - b.t);
+  if (qf === 'din' || mode === 'din') list = list.filter(o => !o.takeaway);
+  if (qf === 'tk' || mode === 'tk') list = list.filter(o => o.takeaway);
+  if (term) list = list.filter(o => String(o.id).includes(term) || String(o.table).includes(term));
+  $('#ql').innerHTML = list.map(o => `<div class="q o-${o.status}" onclick="openOrder(${o.id})"><div class="n">${o.table ? String(o.table).padStart(2, '0') : '🥡'}</div>
+   <div class="m"><b>#${o.id}</b> · ${o.items.reduce((a, i) => a + i.qty, 0)} عناصر<small>${o.items.map(i => i.name).slice(0, 3).join('، ')}</small></div>
+   <div class="st">${Math.floor((Date.now() - o.t) / 60000)}د<br>${STATUS[o.status]}${o.paid ? ' ✓' : ''}</div></div>`).join('') || '<div style="color:var(--muted);text-align:center;padding:30px 0;font-size:13px">لا توجد طلبات نشطة</div>';
+  // routing
+  const ic = { grill: '🔥', prep: '🌿', bar: '☕', kiosk: '🖥' };
+  $('#route').innerHTML = Object.keys(STATIONS).map(k => {
+    const its = active(s).filter(o => o.items.some(i => i.st === k));
+    const pr = its.filter(o => o.status === 'preparing').length, nw = its.filter(o => o.status === 'new').length;
+    const pc = its.length ? Math.round(pr / its.length * 100) : 0;
+    return `<div class="r"><b><span>${its.length}</span>${ic[k]} ${STATIONS[k]}</b><small>${nw} جديد · ${pr} قيد التحضير</small><div class="pr"><i style="width:${pc}%"></i></div></div>`;
+  }).join('');
+  tick(s);
+  // notifications
+  $('#nts').innerHTML = s.notes.slice(0, 5).map(n => `<div class="nt"><i class="dot" style="background:${n.kind === 'ready' ? '#3ddc6e' : n.kind === 'pay' ? '#4aa3ff' : '#ff6a1a'}"></i><span>${n.text}</span><small>${ago(n.t)}</small></div>`).join('') || '<div style="color:var(--muted);font-size:12px">لا إشعارات</div>';
+}
+function tick(s) {
+  s = s || load();
+  const a = active(s).filter(o => o.table).sort((x, y) => x.t - y.t).slice(0, 5);
+  $('#tmr').innerHTML = a.map(o => {
+    const c = o.status === 'ready' ? '#3ddc6e' : o.status === 'preparing' ? '#ffa722' : '#ff6a1a';
+    const el = Date.now() - o.t, pc = o.status === 'ready' ? 100 : Math.min(95, el / (15 * 60e3) * 100);
+    return `<div class="tm" style="--c:${c}"><div class="n">T-${String(o.table).padStart(2, '0')}</div><div class="b"><div class="row" style="display:flex;justify-content:space-between"><span>${o.items.reduce((x, i) => x + i.qty, 0)} عناصر</span><b>${o.status === 'ready' ? 'جاهز' : mmss(el)}</b></div><div class="pr"><i style="width:${pc}%"></i></div></div></div>`;
+  }).join('') || '<div style="color:var(--muted);font-size:12px">لا مؤقتات</div>';
+}
+function openOrder(id) {
+  const s = load(), o = s.orders.find(x => x.id === id); if (!o) return;
+  const nx = { new: 'بدء التحضير', preparing: 'تحديد كجاهز', ready: 'تم التقديم' }[o.status];
+  $('#mb').innerHTML = `<h3 style="margin-bottom:10px">طلب #${o.id} ${o.table ? '· طاولة ' + o.table : '· سفري'}</h3>
+   ${o.items.map(i => `<div class="row"><span>${i.qty}× ${i.name}</span><span>${money(i.price * i.qty)}</span></div>`).join('')}
+   <div class="row" style="border-top:1px solid var(--bd);margin-top:6px;padding-top:8px"><b>${STATUS[o.status]} · ${o.paid ? 'مدفوع' : 'غير مدفوع'}</b><b>${money(o.total)}</b></div>
+   <div class="acts">${nx ? `<button class="btn" onclick="advance(${o.id});closeM()">${nx}</button>` : ''}${!o.paid ? `<button class="btn ghost" onclick="markPaid(${o.id});closeM()">تحصيل الدفع</button>` : ''}<button class="btn ghost" onclick="closeM()">إغلاق</button></div>`;
+  $('#md').classList.add('on');
+}
+function openTable(n) {
+  const s = load(), st = tableStatus(n, s);
+  const os = s.orders.filter(o => o.table === n && o.status !== 'served');
+  if (os.length) return openOrder(os[0].id);
+  $('#mb').innerHTML = `<h3 style="margin-bottom:10px">طاولة ${n} — ${NL[st]}</h3><div class="acts">
+   ${st === 'cleaning' ? `<button class="btn" onclick="clearTable(${n});closeM()">تم التنظيف</button>` : ''}
+   <a class="btn ghost" target="_blank" href="menu.html?table=${n}">فتح قائمة الطاولة</a><button class="btn ghost" onclick="closeM()">إغلاق</button></div>`;
+  $('#md').classList.add('on');
+}
+function closeM() { $('#md').classList.remove('on'); draw(); }
+draw(); onChange(draw); setInterval(() => tick(), 1000);
+</script></body></html>

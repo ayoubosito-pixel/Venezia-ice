@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>شاشة المطبخ KDS</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+:root{--bg:#14151b;--card:#1c1e26;--bd:#2a2d38;--tx:#f2f3f7;--acc:#ff6b35}
+.hd{display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--card);border-bottom:1px solid var(--bd)}
+.hd h1{font-size:20px}.hd .sp{flex:1}
+.flt{display:flex;gap:6px}.flt button{background:#262935;color:var(--muted);padding:7px 14px;border-radius:9px;font-size:13px}.flt .on{background:var(--acc);color:#111;font-weight:700}
+.cols{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:16px;align-items:start}
+@media(max-width:800px){.cols{grid-template-columns:1fr}}
+.col{background:#171921;border:1px solid var(--bd);border-radius:14px;padding:12px;min-height:60vh}
+.col>h2{font-size:17px;margin-bottom:12px;display:flex;justify-content:space-between}
+.col>h2 span{background:#2a2d38;border-radius:99px;padding:0 10px;font-size:13px}
+.k{border-radius:10px;overflow:hidden;margin-bottom:12px;background:#22242e;border:1px solid var(--bd);cursor:pointer;transition:.15s}
+.k:active{transform:scale(.98)}
+.k .h{display:flex;justify-content:space-between;padding:9px 12px;font-weight:800;background:var(--c);color:#111}
+.k .b{padding:10px 12px;font-size:14px;line-height:1.9}
+.k .f{padding:7px 12px;text-align:center;font-size:12px;font-weight:700;background:var(--c);color:#111;opacity:.9}
+.k.a-ok{--c:#06b6cc}.k.a-warn{--c:#ff8c2e}.k.a-late{--c:#ef4444}.k.a-done{--c:#22c55e}
+.empty{color:var(--muted);text-align:center;padding:40px 0;font-size:13px}
+</style></head><body>
+<div class="hd"><a href="dashboard.html" style="font-size:20px">←</a><h1>KDS — شاشة المطبخ</h1>
+ <div class="flt" id="fl"></div><div class="sp"></div><span id="clk" style="color:var(--muted)"></span></div>
+<div class="cols">
+ <div class="col"><h2>قيد الانتظار <span id="c1">0</span></h2><div id="p1"></div></div>
+ <div class="col"><h2>قيد التحضير <span id="c2">0</span></h2><div id="p2"></div></div>
+ <div class="col"><h2>جاهز <span id="c3">0</span></h2><div id="p3"></div></div>
+</div>
+<script src="store.js"></script>
+<script>
+let st = 'all'; const $ = s => document.querySelector(s);
+function card(o, kind) {
+  const min = Math.floor((Date.now() - o.t) / 60000);
+  const cls = kind === 'ready' ? 'a-done' : min >= 15 ? 'a-late' : min >= 8 ? 'a-warn' : 'a-ok';
+  const its = o.items.filter(i => st === 'all' || i.st === st);
+  const act = { new: 'اضغط لبدء التحضير', preparing: 'اضغط عند الانتهاء', ready: 'اضغط عند التقديم' }[o.status];
+  return `<div class="k ${cls}" onclick="advance(${o.id});draw()"><div class="h"><span>${o.table ? 'طاولة ' + o.table : 'سفري'} · #${o.id}</span><span>${kind === 'ready' ? '✓' : mmss(Date.now() - o.t)}</span></div>
+  <div class="b">${its.map(i => `${i.qty}× ${i.name}`).join('<br>')}</div><div class="f">${min >= 15 && kind !== 'ready' ? '⚠ متأخر — ' : ''}${act}</div></div>`;
+}
+function draw() {
+  const s = load();
+  $('#fl').innerHTML = [['all', 'الكل'], ...Object.entries(STATIONS)].map(([k, l]) => `<button class="${st === k ? 'on' : ''}" onclick="st='${k}';draw()">${l}</button>`).join('');
+  const act = s.orders.filter(o => o.status !== 'served' && o.items.some(i => st === 'all' || i.st === st)).sort((a, b) => a.t - b.t);
+  [['new', 1], ['preparing', 2], ['ready', 3]].forEach(([k, n]) => {
+    const l = act.filter(o => o.status === k);
+    $('#c' + n).textContent = l.length;
+    $('#p' + n).innerHTML = l.map(o => card(o, k)).join('') || '<div class="empty">لا توجد طلبات</div>';
+  });
+  $('#clk').textContent = new Date().toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' });
+}
+draw(); onChange(draw); setInterval(draw, 1000);
+</script></body></html>
