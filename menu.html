@@ -11,7 +11,9 @@ header{display:flex;align-items:center;justify-content:space-between;padding:16p
 header .ic{width:34px;height:34px;display:grid;place-items:center;background:var(--card);border-radius:10px;cursor:pointer}
 .online{display:block;width:max-content;margin:0 auto 10px;background:rgba(31,227,95,.12);color:var(--acc);font-size:11px;padding:3px 12px;border-radius:99px}
 .search{margin:0 16px 12px;background:var(--card2);border:1px solid var(--bd);border-radius:12px;padding:12px;width:calc(100% - 32px);outline:none}
-.chips{display:flex;gap:8px;overflow-x:auto;padding:0 16px 12px;scrollbar-width:none}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:0 16px 12px;scrollbar-width:none;flex:0 0 auto;min-height:52px;align-items:center}
+#app>*{flex-shrink:0}
+.chips::-webkit-scrollbar{display:none}
 .chip{background:var(--card2);padding:8px 18px;border-radius:99px;white-space:nowrap;font-size:13px}
 .chip.on{background:var(--acc);color:#04210f;font-weight:700}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 90px}
@@ -67,8 +69,13 @@ const q = new URLSearchParams(location.search);
 const table = parseInt(q.get('table')) || null;
 let view = 'menu', cat = 'all', term = '', cart = {};
 try { cart = JSON.parse(sessionStorage.getItem('cart') || '{}'); } catch (e) {}
-let myOrder = parseInt(localStorage.getItem('myOrder_' + (table || 0))) || null;
-if (myOrder) view = 'track';
+const SK = 'myOrders_' + (table || 0);
+let myIds = []; try { myIds = JSON.parse(localStorage.getItem(SK) || '[]'); } catch (e) {}
+function saveIds() { localStorage.setItem(SK, JSON.stringify(myIds)); }
+let seenChat = parseInt(sessionStorage.getItem('seenChat') || '0');
+function chatMsgs() { const s = load(); return (s.chat && s.chat[table || 'tk']) || []; }
+function unread() { return chatMsgs().filter(m => m.from === 'w' && m.t > seenChat).length; }
+if (myIds.length) view = 'track';
 const $ = s => document.querySelector(s);
 const items = () => Object.entries(cart).filter(([, v]) => v > 0).map(([id, qty]) => { const m = MENU.find(x => x.id == id); return { ...m, qty }; });
 const count = () => items().reduce((a, i) => a + i.qty, 0);
@@ -84,7 +91,7 @@ function qtyCtl(id) {
 }
 function nav() {
   const b = (v, i, t, extra = '') => `<button class="${view === v ? 'on' : ''}" onclick="go('${v}')"><i>${i}</i>${t}${extra}</button>`;
-  return `<nav class="bot">${b('menu', '🏠', 'القائمة')}${b('cart', '🛒', 'السلة', count() ? `<span class="badge">${count()}</span>` : '')}${b('track', '📋', 'طلبي')}</nav>`;
+  return `<nav class="bot">${b('menu', '🏠', 'القائمة')}${b('cart', '🛒', 'السلة', count() ? `<span class="badge">${count()}</span>` : '')}${b('track', '📋', 'طلبي')}${myIds.length ? b('chat', '💬', 'النادل', unread() ? `<span class="badge">${unread()}</span>` : '') : ''}</nav>`;
 }
 function vMenu() {
   const list = MENU.filter(m => (cat === 'all' || m.cat === cat) && m.name.includes(term));
@@ -102,6 +109,7 @@ function vCart() {
   <div class="sum"><div class="row"><span>المجموع الفرعي</span><span>${money(sub())}</span></div><div class="row"><span>رسوم الخدمة</span><span>${money(FEE)}</span></div><div class="row t"><span>الإجمالي</span><span class="price">${money(sub() + FEE)}</span></div></div><div class="note" style="margin-top:12px">💡 الدفع يتم بعد انتهائك عبر النادل: كاش أو بجهاز البطاقة.</div></div>
   <div class="cta"><button class="btn" onclick="sendOrder()">إرسال الطلب للنادل ✓</button></div>`;
 }
+let finished = false;
 function sendOrder() {
   unlockAudio();
   const it = items().map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, st: i.st, cat: i.cat }));
@@ -109,41 +117,71 @@ function sendOrder() {
   toast('جاري الإرسال...');
   addOrder(table, it, o => {
     if (!o) return toast('تعذر الإرسال، تحقق من الاتصال بالإنترنت');
-    myOrder = o.id; lastSt = null; localStorage.setItem('myOrder_' + (table || 0), o.id);
+    finished = false; myIds.push(o.id); saveIds();
     cart = {}; sessionStorage.removeItem('cart'); go('track');
   });
 }
-let lastSt = null;
-function reqPay(id, m) { unlockAudio(); requestPay(id, m); toast(m === 'cash' ? 'تم إبلاغ النادل — جهّز المبلغ' : 'تم إبلاغ النادل — سيحضر جهاز الدفع'); render(); }
+function reqPayT(m) { unlockAudio(); requestPayTable(table, m); toast(m === 'cash' ? 'تم إبلاغ النادل — جهّز المبلغ' : 'تم إبلاغ النادل — سيحضر جهاز الدفع'); }
+function callWaiter() { unlockAudio(); sendChat(table, 'c', 'الزبون', '🙋 الزبون ينادي النادل', 'call', ok => toast(ok ? 'تم إبلاغ النادل 🙋' : 'تعذر الإرسال')); }
+function quick(t) { unlockAudio(); sendChat(table, 'c', 'الزبون', t, 'msg'); }
+function sendMsg() { const i = $('#cmsg'); const t = i.value.trim(); if (!t) return; i.value = ''; unlockAudio(); sendChat(table, 'c', 'الزبون', t, 'msg'); }
 function vTrack() {
-  const s = load(); const o = s.orders.find(x => x.id === myOrder);
-  if (!o && !synced()) return `<div class="page"><div class="empty">⏳ جاري التحميل...</div></div>${nav()}`;
-  if (!o) { myOrder = null; return `<div class="page"><div class="title">طلبي</div><div class="empty">📋<br>لا يوجد طلب نشط</div></div>${nav()}`; }
-  const order = ['pending', 'new', 'preparing', 'ready', 'served'];
-  const idx = order.indexOf(o.status);
-  if (lastSt !== null && lastSt !== o.status) {
-    if (o.status === 'new') toast('النادل ' + (o.waiter || '') + ' استلم طلبك ✅');
-    if (o.status === 'ready') { alertUser('طلبك جاهز، النادل في الطريق إليك'); toast('🎉 طلبك جاهز'); }
+  if (!synced()) return `<div class="page"><div class="empty">⏳ جاري التحميل...</div></div>${nav()}`;
+  const s = load();
+  const all = myIds.map(id => s.orders.find(o => o.id === id)).filter(Boolean);
+  const act = all.filter(o => !(o.paid && o.status === 'served'));
+  if (!act.length) {
+    if (all.length) finished = true;
+    if (myIds.length) { myIds = []; saveIds(); }
+    const done = finished;
+    return `<div class="page"><div class="title">طلبي</div><div class="empty">${done ? '✅ تم الدفع، شكرًا لزيارتكم' : '📋<br>لا يوجد طلب نشط'}</div><button class="btn" style="width:100%" onclick="go('menu')">طلب جديد</button></div>${nav()}`;
   }
-  lastSt = o.status;
-  const lbl = ['تم إرسال الطلب — بانتظار النادل', 'النادل ' + (o.waiter || '') + ' استلم طلبك', 'جاري التحضير 👨‍🍳', 'طلبك جاهز — النادل في الطريق إليك', 'تم التقديم — بالهنا!'];
+  const order = ['pending', 'new', 'preparing', 'ready', 'served'];
+  const wn = [...new Set(act.map(o => o.waiter).filter(Boolean))].join('، ');
+  const cards = act.map(o => {
+    const idx = order.indexOf(o.status);
+    const lbl = ['تم إرسال الطلب — بانتظار النادل', 'النادل ' + (o.waiter || '') + ' استلم طلبك', 'قيد التحضير 👨‍🍳', 'طلبك جاهز — النادل ' + (o.waiter || '') + ' قادم إليك 🎉', 'تم التقديم — بالهنا!'][idx];
+    return `<div class="sum" style="margin-bottom:12px"><div class="row"><b>فاتورة #${o.id}</b><span class="price">${o.paid ? 'مدفوع ✓' : money(o.total + FEE)}</span></div>
+    <div style="margin:8px 0 4px;font-weight:700;color:${o.status === 'ready' ? 'var(--acc)' : 'inherit'}">${lbl}</div><div class="bar"><i style="width:${(idx + 1) * 20}%"></i></div>
+    ${o.items.map(i => `<div class="row" style="font-size:13px"><span>${i.qty}× ${i.name}</span><span>${money(i.price * i.qty)}</span></div>`).join('')}</div>`;
+  }).join('');
+  const payable = act.filter(o => !o.paid && o.status !== 'pending');
+  const req = payable.find(o => o.payReq);
+  const tot = payable.reduce((a, o) => a + o.total + FEE, 0);
   let pay = '';
-  if (o.paid) pay = `<div class="note" style="color:var(--acc)">✅ تم الدفع، شكرًا لزيارتكم</div>`;
-  else if (o.payReq) pay = `<div class="note">⏳ تم إبلاغ النادل — ${o.payReq === 'cash' ? 'جهّز المبلغ نقدًا' : 'سيحضر النادل جهاز الدفع بالبطاقة'}</div>`;
-  else if (o.status === 'ready' || o.status === 'served') pay = `<div class="title" style="font-size:16px;margin-top:18px">انتهيت؟ اطلب الحساب</div><div class="two"><button class="btn" onclick="reqPay(${o.id},'cash')">💵 كاش</button><button class="btn" onclick="reqPay(${o.id},'card')">💳 بطاقة</button></div>`;
-  return `<div class="page"><div class="title">طلب #${o.id} ${o.table ? '· طاولة ' + o.table : '· سفري'}</div>
-  <div class="steps">${lbl.map((l, i) => `<div class="stp ${i <= idx ? 'on' : ''}"><div class="c">${i <= idx ? '✓' : i + 1}</div><div><b>${l}</b></div></div>`).join('')}</div>
-  <div class="sum">${o.items.map(i => `<div class="row"><span>${i.qty}× ${i.name}</span><span>${money(i.price * i.qty)}</span></div>`).join('')}<div class="row t"><span>الإجمالي (مع الخدمة)</span><span class="price">${money(o.total + FEE)}</span></div></div>
-  ${pay}
-  ${o.paid && o.status === 'served' ? `<button class="btn" style="width:100%;margin-top:14px" onclick="newOrder()">طلب جديد</button>` : ''}</div>${nav()}`;
+  if (req) pay = `<div class="note" style="margin-top:0">⏳ تم إبلاغ النادل ${wn} — ${req.payReq === 'cash' ? 'جهّز ' + money(tot) + ' نقدًا' : 'سيحضر جهاز الدفع بالبطاقة'}</div>`;
+  else if (payable.length) pay = `<div class="title" style="font-size:16px;margin-top:6px">انتهيت؟ اطلب الحساب (${money(tot)})</div><div class="two"><button class="btn" onclick="reqPayT('cash')">💵 كاش</button><button class="btn" onclick="reqPayT('card')">💳 بطاقة</button></div>`;
+  const hint = audioReady() ? '' : `<div class="note" style="margin:0 0 12px;color:var(--acc)" onclick="unlockAudio();render()">🔔 المس هنا لتفعيل التنبيهات الصوتية</div>`;
+  return `<div class="page"><div class="title">طاولتي ${table ? table : '(سفري)'}${wn ? ' · النادل ' + wn : ''}</div>${hint}${cards}
+  <div class="two" style="margin-bottom:12px"><button class="btn ghost" onclick="go('menu')">➕ اطلب المزيد</button><button class="btn ghost" onclick="callWaiter()">🙋 نادِ النادل</button></div>${pay}</div>${nav()}`;
 }
-function newOrder() { localStorage.removeItem('myOrder_' + (table || 0)); myOrder = null; go('menu'); }
+function vChat() {
+  seenChat = Date.now(); sessionStorage.setItem('seenChat', seenChat);
+  const m = chatMsgs();
+  const wn = (() => { const s = load(); return tableWaiter(s, table); })();
+  return `<div class="page"><div class="title">💬 التواصل مع النادل${wn ? ' ' + wn : ''}</div>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;min-height:120px">${m.length ? m.map(x => `<div style="align-self:${x.from === 'c' ? 'flex-start' : 'flex-end'};max-width:80%;background:${x.from === 'c' ? 'var(--acc)' : 'var(--card2)'};color:${x.from === 'c' ? '#04210f' : 'var(--tx)'};padding:9px 13px;border-radius:14px;font-size:14px">${x.from === 'w' ? '<small style="opacity:.7;display:block">' + x.name + '</small>' : ''}${x.text}</div>`).join('') : '<div class="empty" style="padding:30px 0">اكتب رسالة أو اضغط أحد الأزرار</div>'}</div>
+  <div class="two" style="margin-bottom:8px"><button class="btn ghost" onclick="callWaiter()">🙋 نادِ النادل</button><button class="btn ghost" onclick="quick('💧 أريد ماء')">💧 ماء</button><button class="btn ghost" onclick="quick('🧂 أحتاج أدوات إضافية')">🧂 أدوات</button><button class="btn ghost" onclick="quick('⚠️ عندي ملاحظة على الطلب')">⚠️ ملاحظة</button></div>
+  <div style="display:flex;gap:8px"><input id="cmsg" class="inp" style="direction:rtl;text-align:right" placeholder="اكتب رسالتك..." onkeydown="if(event.key==='Enter')sendMsg()"><button class="btn" onclick="sendMsg()">إرسال</button></div></div>${nav()}`;
+}
+function newOrder() { go('menu'); }
 function render(keepFocus) {
   const a = $('#app'); const f = document.activeElement && document.activeElement.className === 'search';
-  a.innerHTML = { menu: vMenu, cart: vCart, track: vTrack }[view]();
+  const cm = $('#cmsg'), cmv = cm ? cm.value : '', cmf = cm && document.activeElement === cm;
+  a.innerHTML = { menu: vMenu, cart: vCart, track: vTrack, chat: vChat }[view]();
+  const c2 = $('#cmsg'); if (c2) { c2.value = cmv; if (cmf) c2.focus(); }
   if (f) { const i = $('.search'); i.focus(); i.setSelectionRange(term.length, term.length); }
 }
 render();
-onChange(() => { if (view === 'track') render(); }, 1500);
+onChange(() => { if (view === 'track' || view === 'chat') render(); }, 1500);
+watchEvents(e => {
+  if (!myIds.length) return;
+  if (e.order && myIds.includes(e.order)) {
+    if (e.type === 'accepted') { toast('النادل ' + e.waiter + ' استلم طلبك ✅'); alertUser('النادل ' + e.waiter + ' استلم طلبك رقم ' + e.order); }
+    if (e.type === 'order_ready') { toast('🎉 طلبك جاهز — النادل ' + e.waiter + ' قادم إليك'); alertUser('طلبك رقم ' + e.order + ' جاهز، والنادل ' + e.waiter + ' قادم إليك'); }
+  }
+  if (e.type === 'chat' && e.from === 'w' && e.table === (table || null)) { toast('💬 ' + e.name + ': ' + e.text); alertUser('رسالة من النادل ' + e.name + ': ' + e.text); }
+  render();
+});
 document.addEventListener('click', () => unlockAudio(), { once: true });
 </script></body></html>

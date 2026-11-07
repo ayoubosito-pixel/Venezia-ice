@@ -19,8 +19,10 @@
 .k .b{padding:10px 12px;font-size:14px;line-height:1.9}
 .k .f{padding:7px 12px;text-align:center;font-size:12px;font-weight:700;background:var(--c);color:#111;opacity:.9}
 .k.a-ok{--c:#06b6cc}.k.a-warn{--c:#ff8c2e}.k.a-late{--c:#ef4444}.k.a-done{--c:#22c55e}
+.gate{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px}.gate[hidden]{display:none}.gate h2{font-size:24px}.gate p{color:var(--muted);max-width:340px}
 .empty{color:var(--muted);text-align:center;padding:40px 0;font-size:13px}
 </style></head><body>
+<div id="gate" class="gate" hidden><h2>🔔 تفعيل تنبيهات المطبخ</h2><p>المس الزر ليرنّ المطبخ وينطق اسم النادل ورقم الفاتورة عند وصول كل طلب.</p><button class="btn" style="padding:16px 28px;font-size:17px" onclick="unlockAudio();beep(1);say('الصوت مفعّل');gate()">تفعيل الصوت الآن</button></div>
 <div class="hd"><a href="dashboard.html" style="font-size:20px">←</a><h1>KDS — شاشة المطبخ</h1>
  <div class="flt" id="fl"></div><div class="sp"></div><button class="btn" id="snd" onclick="unlockAudio();beep(1);this.textContent='🔔 الصوت مفعّل'">🔔 تفعيل الصوت</button><span id="clk" style="color:var(--muted)"></span></div>
 <div class="cols">
@@ -53,5 +55,10 @@ function draw() {
   $('#clk').textContent = (cloudOn() ? '☁️ ' : '⚠️ محلي ') + new Date().toLocaleTimeString('ar', { hour: '2-digit', minute: '2-digit' });
 }
 draw(); onChange(draw); setInterval(draw, 1000);
-watchEvents(e => { if (e.type === 'accepted') alertUser('طلب جديد للمطبخ، ' + (e.table ? 'طاولة ' + e.table : 'سفري')); draw(); }, 1500);
+function gate() { document.getElementById('gate').hidden = audioReady(); }
+setInterval(gate, 1000); gate();
+watchEvents(e => {
+  if (e.type === 'accepted') alertUser('طلب جديد من النادل ' + e.waiter + '، ' + (e.table ? 'طاولة ' + e.table : 'سفري') + '، فاتورة رقم ' + e.order);
+  draw();
+});
 </script></body></html>

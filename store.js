@@ -34,7 +34,7 @@ const MENU = [
 function norm(s) {
   s = s || {};
   s.orders = s.orders || []; s.cleaning = s.cleaning || []; s.notes = s.notes || []; s.events = s.events || [];
-  s.seq = s.seq || 100; s.evSeq = s.evSeq || 0;
+  s.seq = s.seq || 100; s.evSeq = s.evSeq || 0; s.chat = s.chat || {};
   return s;
 }
 const clone = o => JSON.parse(JSON.stringify(o));
@@ -86,6 +86,9 @@ function replaceState(s) {
   s = norm(clone(s));
   if (_ref) _ref.set(s); else { _state = s; cache(); notify(); }
 }
+
+/* demo/reset buttons are hidden unless the page URL has ?demo=1 */
+try { if (!/[?&]demo=1/.test(location.search)) { const st = document.createElement('style'); st.textContent = '.demo-only{display:none!important}'; document.head.appendChild(st); } } catch (e) {}
 
 /* ---------- helpers ---------- */
 function money(n) { return '$' + Number(n).toFixed(2); }
@@ -167,6 +170,45 @@ function markPaid(id, method) {
     o.paid = true; o.method = method || o.payReq || o.method || 'cash'; o.payReq = null; o.tPaid = Date.now();
     pushNote(s, 'تم دفع الطلب #' + o.id, 'pay');
     maybeClean(s, o);
+    if (o.table && !unpaidAt(s, o.table).length) delete s.chat[chatKey(o.table)];
+    return true;
+  });
+}
+function chatKey(t) { return t || 'tk'; }
+function unpaidAt(s, t) { return s.orders.filter(o => o.table === (t || null) && !o.paid); }
+function tableWaiter(s, t) {
+  const a = s.orders.filter(o => o.table === (t || null) && !(o.paid && o.status === 'served') && o.waiter).sort((x, y) => y.t - x.t)[0];
+  return a ? a.waiter : null;
+}
+/* open channel between a table's customer and its waiter, lives until the table is paid */
+function sendChat(table, from, name, text, kind, done) {
+  mutate(s => {
+    const k = chatKey(table);
+    s.chat[k] = (s.chat[k] || []).concat([{ t: Date.now(), from, name, text, kind: kind || 'msg' }]).slice(-40);
+    const z = zoneObj(table || null);
+    s.events.push({ id: ++s.evSeq, t: Date.now(), type: 'chat', from, name, text, kind: kind || 'msg', table: table || null, zone: z.name, zoneId: z.id, waiter: from === 'c' ? tableWaiter(s, table) : name, order: null });
+    s.events = s.events.slice(-60);
+    return true;
+  }, () => done && done(true), () => done && done(false));
+}
+function requestPayTable(table, method) {
+  mutate(s => {
+    const os = unpaidAt(s, table).filter(o => o.status !== 'pending');
+    if (!os.length) return false;
+    os.forEach(o => { o.payReq = method; o.payReqAt = Date.now(); });
+    const total = os.reduce((a, o) => a + o.total, 0);
+    pushNote(s, where(os[0]) + ' — يطلب الدفع ' + (method === 'cash' ? 'كاش' : 'بالبطاقة'), 'pay');
+    pushEvent(s, 'pay_request', os[0], { method, orders: os.map(o => o.id), total });
+    return true;
+  });
+}
+function markPaidTable(table, method) {
+  mutate(s => {
+    const os = unpaidAt(s, table);
+    if (!os.length) return false;
+    os.forEach(o => { o.paid = true; o.method = method || o.payReq || o.method || 'cash'; o.payReq = null; o.tPaid = Date.now(); maybeClean(s, o); });
+    pushNote(s, 'تم دفع ' + (table ? 'طاولة ' + table : 'الطلب'), 'pay');
+    if (table) delete s.chat[chatKey(table)]; // conversation ends with payment
     return true;
   });
 }

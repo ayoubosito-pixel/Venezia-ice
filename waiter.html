@@ -48,6 +48,7 @@ h2 span{background:var(--acc);color:#111;border-radius:99px;padding:0 9px;font-s
   <div class="tools"><button class="btn ghost" onclick="testSound()">🔊 اختبار الصوت</button><span id="vs" class="pill" style="align-self:center"></span></div>
   <h2>طلبات جديدة بانتظار نادل <span id="n1">0</span></h2><div id="l1"></div>
   <h2>طلباتي <span id="n2">0</span></h2><div id="l2"></div>
+  <h2>💬 رسائل الطاولات <span id="n3">0</span></h2><div id="l3"></div>
  </div>
 </div>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -96,14 +97,16 @@ const inZone = o => zone === 'all' || zoneObj(o.table).id === zone;
 
 function accept(id) { acceptOrder(id, me, ok => { toast(ok ? '✅ استلمت الطلب — ظهر الآن في المطبخ' : 'سبقك نادل آخر لهذا الطلب'); draw(); }); }
 function served(id) { advance(id); draw(); }
-function paid(id) { markPaid(id); toast('تم تحصيل الدفع ✓'); draw(); }
+function paid(id) { const o = load().orders.find(x => x.id == id); if (o && o.table) markPaidTable(o.table); else markPaid(id); toast('تم تحصيل الدفع ✓'); draw(); }
+function reply(tb, text) { sendChat(tb, 'w', me, text, 'msg'); }
+function replyInput(tb) { const i = document.getElementById('ci_' + (tb || 'tk')); const v = i.value.trim(); if (!v) return; i.value = ''; reply(tb, v); }
 
 function card(o, buttons) {
   return `<div class="c ${o.status}"><div class="h"><span>${where(o)} · ${zoneOf(o.table)}</span><span class="st">${STATUS[o.status]}</span></div>
   <div class="it">${o.items.map(i => i.qty + '× ' + i.name).join('<br>')}</div>
   <div class="m">#${o.id} · ${ago(o.t)} · ${money(o.total)}</div>${buttons || ''}</div>`;
 }
-function draw() {
+function _draw() {
   if (!me) return;
   const s = load();
   $('#zl').textContent = 'المنطقة: ' + (zone === 'all' ? 'الكل' : ZONES.find(z => z.id === zone).name) + (cloudOn() ? ' · ☁️ متصل' : ' · ⚠️ وضع محلي');
@@ -119,21 +122,45 @@ function draw() {
     else if (o.status === 'served' && !o.paid) b += `<div class="m" style="margin-bottom:8px">بانتظار طلب الدفع من الزبون</div><button class="btn ghost big" onclick="paid(${o.id})">تحصيل يدويًا</button>`;
     return card(o, b);
   }).join('') || '<div class="empty">لا توجد طلبات باسمك الآن</div>';
+  const chats = Object.keys(s.chat || {}).filter(k => (s.chat[k] || []).length).map(k => ({ k, tb: k === 'tk' ? null : +k })).filter(c => {
+    const w = tableWaiter(s, c.tb); return w === me || (!w && inZone({ table: c.tb }));
+  });
+  $('#n3').textContent = chats.length;
+  $('#l3').innerHTML = chats.map(c => {
+    const m = s.chat[c.k].slice(-4);
+    return `<div class="c new"><div class="h"><span>${c.tb ? 'طاولة ' + c.tb : 'سفري'}</span><span class="st">${zoneOf(c.tb)}</span></div>
+    <div class="it">${m.map(x => (x.from === 'c' ? '👤 ' : '🧑‍🍳 ') + x.text).join('<br>')}</div>
+    <div class="two" style="margin-bottom:8px"><button class="btn ghost" onclick="reply(${c.tb},'في الطريق إليك 🏃')">في الطريق 🏃</button><button class="btn ghost" onclick="reply(${c.tb},'حاضر ✅')">حاضر ✅</button></div>
+    <div style="display:flex;gap:6px"><input class="inp ci" id="ci_${c.k}" placeholder="اكتب ردًا..." onkeydown="if(event.key==='Enter')replyInput(${c.tb})"><button class="btn" onclick="replyInput(${c.tb})">إرسال</button></div></div>`;
+  }).join('') || '<div class="empty">لا توجد رسائل</div>';
 }
 
 watchEvents(e => {
   if (!me) return;
-  if (e.type === 'new_order' && (zone === 'all' || e.zoneId === zone)) {
+  const mineZone = zone === 'all' || e.zoneId === zone;
+  if (e.type === 'new_order' && mineZone) {
     sysNotify('طلب جديد في ' + e.zone); alertUser('طلب جديد في ' + e.zone + (e.table ? '، طاولة ' + e.table : '')); banner('🔔 طلب جديد — ' + e.zone + (e.table ? ' · طاولة ' + e.table : ''));
   }
   if (e.type === 'order_ready' && e.waiter === me) {
-    sysNotify('طلبك جاهز'); alertUser('الطلب جاهز يا ' + me + '، ' + (e.table ? 'طاولة ' + e.table : 'سفري')); banner('✅ طلبك جاهز — ' + (e.table ? 'طاولة ' + e.table : 'سفري'));
+    const w = (e.table ? 'طاولة ' + e.table : 'سفري') + '، فاتورة رقم ' + e.order;
+    sysNotify('طلبك جاهز — ' + w); alertUser('الطلب جاهز يا ' + me + '، ' + w); banner('✅ طلبك جاهز — ' + (e.table ? 'طاولة ' + e.table : 'سفري') + ' · فاتورة #' + e.order);
   }
   if (e.type === 'pay_request' && e.waiter === me) {
-    sysNotify('طلب دفع من طاولة ' + e.table); alertUser('طاولة ' + e.table + ' تريد الدفع ' + (e.method === 'cash' ? 'نقدًا' : 'بالبطاقة، أحضر جهاز الدفع')); banner('💰 طلب دفع — طاولة ' + e.table);
+    sysNotify('طلب دفع من طاولة ' + e.table); alertUser('طاولة ' + e.table + ' تريد الدفع ' + (e.method === 'cash' ? 'نقدًا' : 'بالبطاقة، أحضر جهاز الدفع')); banner('💰 طلب دفع — طاولة ' + e.table + ' · ' + money(e.total || 0));
+  }
+  if (e.type === 'chat' && e.from === 'c' && (e.waiter === me || (!e.waiter && mineZone))) {
+    const tx = e.kind === 'call' ? 'طاولة ' + e.table + ' تنادي النادل' : 'رسالة من طاولة ' + e.table + ': ' + e.text;
+    sysNotify(tx); alertUser(tx); banner('💬 ' + tx);
   }
   draw();
-}, 1500);
+});
+function draw() {
+  const f = document.activeElement, fid = f && f.id, vals = {};
+  document.querySelectorAll('.ci').forEach(i => vals[i.id] = i.value);
+  _draw();
+  document.querySelectorAll('.ci').forEach(i => { if (vals[i.id]) i.value = vals[i.id]; });
+  if (fid && fid.startsWith('ci_')) { const e = document.getElementById(fid); if (e) e.focus(); }
+}
 onChange(draw, 2000);
 show(); gate(); keepAwake();
 </script></body></html>
