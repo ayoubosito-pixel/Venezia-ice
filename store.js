@@ -233,14 +233,28 @@ function watchEvents(handler) {
 }
 
 /* ---------- sound + voice alerts (a browser needs one tap first: call unlockAudio from a button) ---------- */
-let _ac;
+let _ac, _audioOk = false, _spoke = false;
+function audioReady() { return _audioOk; }
 function unlockAudio() {
-  try { _ac = _ac || new (window.AudioContext || window.webkitAudioContext)(); if (_ac.state === 'suspended') _ac.resume(); } catch (e) {}
-  try { if (window.speechSynthesis) speechSynthesis.getVoices(); } catch (e) {}
+  try {
+    _ac = _ac || new (window.AudioContext || window.webkitAudioContext)();
+    if (_ac.state === 'suspended') _ac.resume();
+    const b = _ac.createBuffer(1, 1, 22050), src = _ac.createBufferSource(); // silent tick unlocks iOS
+    src.buffer = b; src.connect(_ac.destination); src.start(0);
+    _audioOk = true;
+  } catch (e) {}
+  try {
+    if (window.speechSynthesis && !_spoke) { _spoke = true; const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); }
+  } catch (e) {}
 }
+/* any first touch on the page unlocks sound, so alerts work after a reload too */
+if (typeof document !== 'undefined') ['pointerdown', 'touchstart', 'click', 'keydown'].forEach(ev =>
+  document.addEventListener(ev, () => { if (!_audioOk) unlockAudio(); }, { passive: true }));
+function voiceOk() { try { return !!window.speechSynthesis && speechSynthesis.getVoices().some(v => v.lang && v.lang.toLowerCase().startsWith('ar')); } catch (e) { return false; } }
 function beep(n) {
   try {
-    unlockAudio();
+    if (!_ac) unlockAudio();
+    if (_ac.state === 'suspended') _ac.resume();
     for (let i = 0; i < (n || 2); i++) {
       const o = _ac.createOscillator(), g = _ac.createGain(), t0 = _ac.currentTime + i * 0.32;
       o.type = 'sine'; o.frequency.value = i % 2 ? 1046 : 880;
@@ -254,7 +268,8 @@ function say(text) {
   try {
     if (!window.speechSynthesis) return;
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ar-SA'; u.rate = 0.95;
+    u.lang = 'ar-SA'; u.rate = 0.95; u.volume = 1;
+    speechSynthesis.cancel();
     const v = speechSynthesis.getVoices().find(x => x.lang && x.lang.startsWith('ar'));
     if (v) u.voice = v;
     speechSynthesis.speak(u);
