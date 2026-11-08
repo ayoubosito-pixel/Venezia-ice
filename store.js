@@ -63,7 +63,7 @@ let _cfg = null, _cref = null, _cfgReady = false;
 function cfgReady() { return _cfgReady; }
 function normCfg(c) {
   if (!c || !c.v) { if (!c || !c.menu) c = clone(DEFAULT_CFG); }
-  c.cats = c.cats || {}; c.menu = c.menu || []; c.zones = c.zones || []; c.pin = c.pin || '1234';
+  c.cats = c.cats || {}; c.menu = c.menu || []; c.zones = c.zones || []; c.waiters = c.waiters || []; c.pin = c.pin || '1234';
   c.zones.forEach(z => { z.tables = z.tables || []; });
   c.menu.forEach(m => { m.opts = m.opts || []; });
   return c;
@@ -75,6 +75,14 @@ function applyCfg(c) {
   ZONES.length = 0; c.zones.forEach(z => ZONES.push(z)); ZONES.push(TK_ZONE);
 }
 applyCfg(normCfg((() => { try { return JSON.parse(localStorage.getItem(CKEY)); } catch (e) { return null; } })()));
+/* waiter / admin passwords are stored only as SHA-256 hashes (salted with the account id) */
+async function hashPw(id, pw) {
+  const s = 'smt|' + id + '|' + pw;
+  try {
+    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+    return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join('');
+  } catch (e) { let h = 0; for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) | 0; return 'x' + h; }
+}
 function cfgPin() { return (_cfg && _cfg.pin) || '1234'; }
 /* cfgMutate(fn): fn(config) edits it, returns a result or false to cancel. Saved to Firebase as a transaction. */
 function cfgMutate(fn, done, fail) {

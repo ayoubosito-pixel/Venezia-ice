@@ -37,9 +37,10 @@ h2 span{background:var(--acc);color:#111;border-radius:99px;padding:0 9px;font-s
 </style></head><body>
 <div class="wrap">
  <div id="login" class="login" hidden>
-  <h1>🧑‍🍳 تطبيق النادل</h1><p>أدخل اسمك واختر منطقتك لتصلك تنبيهات الطلبات الجديدة بالصوت.</p>
-  <input class="inp" id="nm" placeholder="اسم النادل">
-  <select class="inp" id="zn"></select>
+  <h1>🧑‍🍳 تطبيق النادل</h1><p>اختر اسمك وأدخل كلمة المرور التي أعطاك إياها المدير.</p>
+  <select class="inp" id="wsel"></select>
+  <input class="inp" id="wpw" type="password" autocomplete="current-password" placeholder="كلمة المرور" onkeydown="if(event.key==='Enter')login()">
+  <div id="lhint" style="color:var(--muted);font-size:13px;min-height:18px"></div>
   <button class="btn big" onclick="login()">دخول وتفعيل التنبيهات 🔔</button>
  </div>
  <div id="gate" class="gate" hidden><h2>🔔 تفعيل التنبيهات</h2><p>المتصفح يمنع الصوت حتى تلمس الشاشة. المس الزر ليرنّ الهاتف عند وصول كل طلب.</p><button class="btn big" style="max-width:320px" onclick="activate()">تفعيل الصوت الآن</button></div>
@@ -56,24 +57,45 @@ h2 span{background:var(--acc);color:#111;border-radius:99px;padding:0 9px;font-s
 <script src="store.js"></script>
 <script>
 const $ = s => document.querySelector(s);
-let me = localStorage.getItem('smt_waiter') || '', zone = localStorage.getItem('smt_wzone') || 'all';
+let me = '', zone = localStorage.getItem('smt_wzone') || 'all';
+let sess = null; try { sess = JSON.parse(localStorage.getItem('smt_wsess') || 'null'); } catch (e) {}
+if (sess && sess.name) me = sess.name; // tentative until the cloud config confirms it
+function wlist() { return ((_cfg && _cfg.waiters) || []).filter(w => !w.off); }
+function checkSession() {
+  if (!cfgReady()) return;
+  const w = sess && ((_cfg.waiters) || []).find(x => x.id === sess.id);
+  if (w && !w.off && w.h === sess.h) me = w.name;
+  else { if (sess) { sess = null; localStorage.removeItem('smt_wsess'); } me = ''; }
+}
+let _wsig = '';
+function refreshLogin() {
+  const ws = wlist(), sig = ws.map(w => w.id + w.name).join('|') + cfgReady();
+  if (sig === _wsig || document.activeElement === $('#wsel')) return;
+  _wsig = sig;
+  $('#wsel').innerHTML = ws.length ? ws.map(w => `<option value="${esc(w.id)}">${esc(w.name)}</option>`).join('') : '<option value="">—</option>';
+  $('#lhint').textContent = ws.length ? '' : (cfgReady() ? 'لا يوجد نوادل مسجلون. اطلب من المدير إضافة حسابك من صفحة الإدارة.' : 'جاري التحميل...');
+}
 const zoneOpts = (sel) => `<option value="all"${sel === 'all' ? ' selected' : ''}>كل المناطق</option>` + ZONES.map(z => `<option value="${z.id}"${sel === z.id ? ' selected' : ''}>${z.name}</option>`).join('');
 
 function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 2600); }
 function banner(t) { const d = document.createElement('div'); d.className = 'banner'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 5000); }
 function show() {
+  checkSession();
   $('#login').hidden = !!me; $('#app').hidden = !me;
   if (me) { $('#who').textContent = '👋 ' + me; $('#zsel').innerHTML = zoneOpts(zone); draw(); }
-  else $('#zn').innerHTML = zoneOpts('all');
+  else refreshLogin();
 }
-function login() {
-  const n = $('#nm').value.trim();
-  if (!n) return toast('اكتب اسمك أولًا');
-  me = n; zone = $('#zn').value;
-  localStorage.setItem('smt_waiter', me); localStorage.setItem('smt_wzone', zone);
-  show(); activate();
+async function login() {
+  if (!cfgReady()) return toast('جاري التحميل... أعد المحاولة بعد ثانية');
+  const w = ((_cfg.waiters) || []).find(x => x.id === $('#wsel').value && !x.off);
+  if (!w) return toast('اختر اسمك من القائمة');
+  const h = await hashPw(w.id, $('#wpw').value);
+  if (h !== w.h) { $('#wpw').value = ''; return toast('كلمة المرور غير صحيحة'); }
+  sess = { id: w.id, h, name: w.name }; localStorage.setItem('smt_wsess', JSON.stringify(sess));
+  zone = w.zone || 'all'; localStorage.setItem('smt_wzone', zone);
+  $('#wpw').value = ''; show(); activate();
 }
-function logout() { localStorage.removeItem('smt_waiter'); me = ''; show(); }
+function logout() { sess = null; localStorage.removeItem('smt_wsess'); me = ''; show(); }
 function chZone() { zone = $('#zsel').value; localStorage.setItem('smt_wzone', zone); draw(); }
 function enableSound() { unlockAudio(); beep(1); }
 async function keepAwake() { try { if (navigator.wakeLock && !document.hidden) window._wl = await navigator.wakeLock.request('screen'); } catch (e) {} }
@@ -162,5 +184,6 @@ function draw() {
   if (fid && fid.startsWith('ci_')) { const e = document.getElementById(fid); if (e) e.focus(); }
 }
 onChange(draw, 2000);
+_listeners.push(() => { const was = me; checkSession(); if (was !== me) { show(); if (was) toast('تم تسجيل خروجك — تغيّرت بيانات حسابك'); } else if (!me) refreshLogin(); });
 show(); gate(); keepAwake();
 </script></body></html>

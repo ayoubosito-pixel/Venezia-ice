@@ -115,9 +115,9 @@ function render(force) {
   const sig = JSON.stringify([tab, _cfg, showQR, base]);
   if (!force && sig === _sig) return;
   _sig = sig;
-  $('#tabs').innerHTML = [['products', '🍽 المنتجات'], ['cats', '🗂 الفئات'], ['tables', '🪑 الصالات والطاولات'], ['settings', '🔐 الإعدادات']]
+  $('#tabs').innerHTML = [['products', '🍽 المنتجات'], ['cats', '🗂 الفئات'], ['tables', '🪑 الصالات والطاولات'], ['waiters', '👥 النوادل'], ['settings', '🔐 الإعدادات']]
     .map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" onclick="tab='${k}';render(true)">${l}</button>`).join('');
-  $('#main').innerHTML = { products: vProducts, cats: vCats, tables: vTables, settings: vSettings }[tab]();
+  $('#main').innerHTML = { products: vProducts, cats: vCats, tables: vTables, waiters: vWaiters, settings: vSettings }[tab]();
   if (tab === 'tables' && showQR) drawQR();
 }
 _listeners.push(() => render());
@@ -234,6 +234,39 @@ function delZone(zid) {
   if (z.tables.length) return toast('احذف طاولات هذه الصالة أولًا');
   if (confirm('حذف «' + z.name + '»؟')) cfgMutate(c => { c.zones = c.zones.filter(x => x.id !== zid); return true; }, null, fail);
 }
+
+/* ---------- waiters: one account + password per waiter ---------- */
+let nwName = '', nwPass = '', nwZone = 'all';
+function vWaiters() {
+  const ws = _cfg.waiters || [];
+  const zn = z => z === 'all' || !z ? 'كل المناطق' : ((ZONES.find(x => x.id === z) || {}).name || 'كل المناطق');
+  return `<div class="warn">لكل نادل حساب باسمه وكلمة مرور خاصة يعطيها له المدير. لا يدخل النادل تطبيقه إلا بها، وتُحفظ مشفّرة. عند تغيير كلمة المرور أو إيقاف الحساب يُسجَّل خروج النادل تلقائيًا.</div>
+  <div class="zc"><b>＋ نادل جديد</b>
+   <div class="two"><div><label>الاسم</label><input class="inp" maxlength="30" value="${esc(nwName)}" oninput="nwName=this.value" placeholder="مثال: ليلى"></div>
+   <div><label>كلمة المرور (4 أحرف أو أكثر)</label><input class="inp" maxlength="40" autocomplete="off" value="${esc(nwPass)}" oninput="nwPass=this.value"></div></div>
+   <label>المنطقة الافتراضية</label><select class="inp" onchange="nwZone=this.value"><option value="all">كل المناطق</option>${ZONES.filter(z => z.id !== 'tk').map(z => `<option value="${z.id}" ${nwZone === z.id ? 'selected' : ''}>${esc(z.name)}</option>`).join('')}</select>
+   <button class="btn" style="margin-top:10px" onclick="addWaiter()">إنشاء الحساب</button></div>
+  ${ws.map(w => `<div class="p ${w.off ? 'off' : ''}"><div class="pi">🧑‍🍳</div><div class="pm"><b>${esc(w.name)} ${w.off ? '<span class="pill">موقوف</span>' : ''}</b><small>${esc(zn(w.zone))}</small></div>
+   <div class="ac"><button title="كلمة مرور جديدة" onclick="resetPw('${w.id}')">🔑</button><button title="إيقاف/تفعيل" onclick="toggleWaiter('${w.id}')">${w.off ? '▶️' : '⏸'}</button><button title="حذف" onclick="delWaiter('${w.id}')">🗑</button></div></div>`).join('') || '<div class="empty">لا يوجد نوادل بعد</div>'}`;
+}
+async function addWaiter() {
+  const name = nwName.trim(), pw = nwPass.trim();
+  if (!name) return toast('اكتب اسم النادل');
+  if (pw.length < 4) return toast('كلمة المرور قصيرة (4 أحرف على الأقل)');
+  if ((_cfg.waiters || []).some(w => w.name === name)) return toast('هذا الاسم موجود مسبقًا');
+  const id = 'w' + Date.now().toString(36), h = await hashPw(id, pw), zone = nwZone;
+  cfgMutate(c => { if (c.waiters.some(w => w.name === name)) return false; c.waiters.push({ id, name, h, zone }); return true; },
+    () => { nwName = ''; nwPass = ''; toast('تم إنشاء حساب ' + name + ' ✓'); render(true); }, fail);
+}
+async function resetPw(id) {
+  const w = (_cfg.waiters || []).find(x => x.id === id); if (!w) return;
+  const pw = prompt('كلمة المرور الجديدة للنادل ' + w.name + ' (4 أحرف أو أكثر)'); if (!pw) return;
+  if (pw.trim().length < 4) return toast('كلمة المرور قصيرة');
+  const h = await hashPw(id, pw.trim());
+  cfgMutate(c => { const q = c.waiters.find(x => x.id === id); if (!q) return false; q.h = h; return true; }, () => toast('تم تغيير كلمة المرور'), fail);
+}
+function toggleWaiter(id) { cfgMutate(c => { const q = c.waiters.find(x => x.id === id); if (!q) return false; q.off = !q.off; return true; }, null, fail); }
+function delWaiter(id) { const w = (_cfg.waiters || []).find(x => x.id === id); if (w && confirm('حذف حساب ' + w.name + '؟')) cfgMutate(c => { c.waiters = c.waiters.filter(x => x.id !== id); return true; }, null, fail); }
 
 /* ---------- settings ---------- */
 function vSettings() {
