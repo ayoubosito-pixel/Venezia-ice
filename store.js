@@ -3,32 +3,52 @@
    Fallback:   localStorage only (same browser) if Firebase is unreachable. */
 const FB_URL = 'https://venezia-tables-default-rtdb.europe-west1.firebasedatabase.app';
 const KEY = 'smt_state_v1';
-const TABLES = 12;
-const CATS = { coffee: 'قهوة', tea: 'شاي', pastry: 'معجنات', snack: 'وجبات' };
 const STATIONS = { grill: 'الشواية', prep: 'التحضير', bar: 'البار', kiosk: 'الكشك' };
 const STATUS = { pending: 'بانتظار النادل', new: 'جديد', preparing: 'قيد التحضير', ready: 'جاهز', served: 'تم التقديم' };
-const ZONES = [
-  { id: 'a', name: 'الصالون الرئيسي', tables: [1, 2, 3, 4] },
-  { id: 'b', name: 'التراس', tables: [5, 6, 7, 8] },
-  { id: 'c', name: 'قسم VIP', tables: [9, 10, 11, 12] },
-  { id: 'tk', name: 'سفري', tables: [] },
-];
-function zoneObj(n) { return ZONES.find(z => z.tables.includes(n)) || ZONES[3]; }
+/* option groups a product can offer (admin ticks which ones apply to each product) */
+const OPTION_GROUPS = {
+  sugar: { name: 'السكر', choices: ['بدون سكر', 'نصف سكرة', 'سكرة', 'سكرتين'], def: 'سكرة' },
+  salt: { name: 'الملح', choices: ['بدون ملح', 'ملح عادي', 'زيادة ملح'], def: 'ملح عادي' },
+  ice: { name: 'الثلج', choices: ['بدون ثلج', 'ثلج قليل', 'ثلج عادي'], def: 'ثلج عادي' },
+  size: { name: 'الحجم', choices: ['صغير', 'وسط', 'كبير'], def: 'وسط' },
+};
+const TK_ZONE = { id: 'tk', name: 'سفري', tables: [] };
+/* default venue; the admin page overwrites it (saved in Firebase node smt_config) */
+const DEFAULT_CFG = {
+  pin: '1234',
+  cats: { coffee: 'قهوة', tea: 'شاي', pastry: 'معجنات', snack: 'وجبات' },
+  zones: [
+    { id: 'a', name: 'الصالون الرئيسي', tables: [1, 2, 3, 4] },
+    { id: 'b', name: 'التراس', tables: [5, 6, 7, 8] },
+    { id: 'c', name: 'قسم VIP', tables: [9, 10, 11, 12] },
+  ],
+  menu: [
+    { id: 1, name: 'إسبريسو', price: 3.5, cat: 'coffee', emoji: '☕', st: 'bar', opts: ['sugar'] },
+    { id: 2, name: 'لاتيه', price: 4.5, cat: 'coffee', emoji: '🥛', st: 'bar', opts: ['sugar'] },
+    { id: 3, name: 'كابتشينو', price: 4, cat: 'coffee', emoji: '☕', st: 'bar', opts: ['sugar'] },
+    { id: 4, name: 'شاي مثلج', price: 3.25, cat: 'tea', emoji: '🍹', st: 'bar', opts: ['sugar', 'ice'] },
+    { id: 5, name: 'شاي أخضر', price: 2.75, cat: 'tea', emoji: '🍵', st: 'bar', opts: ['sugar'] },
+    { id: 6, name: 'كرواسون', price: 3.5, cat: 'pastry', emoji: '🥐', st: 'prep', opts: [] },
+    { id: 7, name: 'بيغل', price: 4, cat: 'pastry', emoji: '🥯', st: 'prep', opts: [] },
+    { id: 8, name: 'مافن', price: 3.5, cat: 'pastry', emoji: '🧁', st: 'prep', opts: [] },
+    { id: 9, name: 'برغر كلاسيك', price: 9, cat: 'snack', emoji: '🍔', st: 'grill', opts: ['salt'] },
+    { id: 10, name: 'بطاطس مقلية', price: 3.5, cat: 'snack', emoji: '🍟', st: 'grill', opts: ['salt'] },
+    { id: 11, name: 'بيتزا', price: 11, cat: 'snack', emoji: '🍕', st: 'grill', opts: ['salt'] },
+    { id: 12, name: 'سلطة سيزر', price: 6.5, cat: 'snack', emoji: '🥗', st: 'prep', opts: ['salt'] },
+  ],
+};
+/* live containers: filled from the config, mutated in place so every page sees updates */
+const CATS = {}, MENU = [], ZONES = [];
+function tableList() { return ZONES.reduce((a, z) => a.concat(z.tables), []).sort((x, y) => x - y); }
+function zoneObj(n) { return ZONES.find(z => z.tables.includes(n)) || TK_ZONE; }
 function zoneOf(n) { return zoneObj(n).name; }
-const MENU = [
-  { id: 1, name: 'إسبريسو', price: 3.5, cat: 'coffee', emoji: '☕', st: 'bar' },
-  { id: 2, name: 'لاتيه', price: 4.5, cat: 'coffee', emoji: '🥛', st: 'bar' },
-  { id: 3, name: 'كابتشينو', price: 4, cat: 'coffee', emoji: '☕', st: 'bar' },
-  { id: 4, name: 'شاي مثلج', price: 3.25, cat: 'tea', emoji: '🍹', st: 'bar' },
-  { id: 5, name: 'شاي أخضر', price: 2.75, cat: 'tea', emoji: '🍵', st: 'bar' },
-  { id: 6, name: 'كرواسون', price: 3.5, cat: 'pastry', emoji: '🥐', st: 'prep' },
-  { id: 7, name: 'بيغل', price: 4, cat: 'pastry', emoji: '🥯', st: 'prep' },
-  { id: 8, name: 'مافن', price: 3.5, cat: 'pastry', emoji: '🧁', st: 'prep' },
-  { id: 9, name: 'برغر كلاسيك', price: 9, cat: 'snack', emoji: '🍔', st: 'grill' },
-  { id: 10, name: 'بطاطس مقلية', price: 3.5, cat: 'snack', emoji: '🍟', st: 'grill' },
-  { id: 11, name: 'بيتزا', price: 11, cat: 'snack', emoji: '🍕', st: 'grill' },
-  { id: 12, name: 'سلطة سيزر', price: 6.5, cat: 'snack', emoji: '🥗', st: 'prep' },
-];
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+/* one order line with its options + note (HTML-escaped: notes come from customers) */
+function itemHtml(i) {
+  return esc((i.qty || 1) + '× ' + i.name)
+    + (i.opts && i.opts.length ? ' <small style="opacity:.85">(' + esc(i.opts.join('، ')) + ')</small>' : '')
+    + (i.note ? ' <small style="color:#ffd27a">📝 ' + esc(i.note) + '</small>' : '');
+}
 
 /* ---------- state + sync engine ---------- */
 function norm(s) {
@@ -38,6 +58,44 @@ function norm(s) {
   return s;
 }
 const clone = o => JSON.parse(JSON.stringify(o));
+const CKEY = 'smt_cfg_v1';
+let _cfg = null, _cref = null, _cfgReady = false;
+function cfgReady() { return _cfgReady; }
+function normCfg(c) {
+  if (!c || !c.v) { if (!c || !c.menu) c = clone(DEFAULT_CFG); }
+  c.cats = c.cats || {}; c.menu = c.menu || []; c.zones = c.zones || []; c.pin = c.pin || '1234';
+  c.zones.forEach(z => { z.tables = z.tables || []; });
+  c.menu.forEach(m => { m.opts = m.opts || []; });
+  return c;
+}
+function applyCfg(c) {
+  _cfg = c;
+  Object.keys(CATS).forEach(k => delete CATS[k]); Object.assign(CATS, c.cats);
+  MENU.length = 0; c.menu.forEach(m => MENU.push(m));
+  ZONES.length = 0; c.zones.forEach(z => ZONES.push(z)); ZONES.push(TK_ZONE);
+}
+applyCfg(normCfg((() => { try { return JSON.parse(localStorage.getItem(CKEY)); } catch (e) { return null; } })()));
+function cfgPin() { return (_cfg && _cfg.pin) || '1234'; }
+/* cfgMutate(fn): fn(config) edits it, returns a result or false to cancel. Saved to Firebase as a transaction. */
+function cfgMutate(fn, done, fail) {
+  if (_cref) {
+    let res;
+    _cref.transaction(cur => {
+      const c = normCfg(cur ? clone(cur) : null);
+      res = fn(c);
+      if (res === false) return;
+      c.v = 1; return clone(c);
+    }, (err, ok) => { if (err || !ok) { if (fail) fail(err); } else if (done) done(res); });
+  } else {
+    const c = normCfg(clone(_cfg));
+    const res = fn(c);
+    if (res === false) { if (fail) fail(); return; }
+    c.v = 1; applyCfg(c);
+    try { localStorage.setItem(CKEY, JSON.stringify(c)); } catch (e) {}
+    notify();
+    if (done) done(res);
+  }
+}
 let _state = norm((() => { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } })());
 let _ref = null, _synced = false, _listeners = [];
 function load() { return _state; }
@@ -51,14 +109,17 @@ function cache() { try { localStorage.setItem(KEY, JSON.stringify(_state)); } ca
     if (typeof firebase !== 'undefined') {
       firebase.initializeApp({ databaseURL: FB_URL });
       _ref = firebase.database().ref('smt_state');
+      _cref = firebase.database().ref('smt_config');
+      _cref.on('value', snap => { _cfgReady = true; applyCfg(normCfg(snap.val())); try { localStorage.setItem(CKEY, JSON.stringify(_cfg)); } catch (e) {} notify(); });
       _ref.on('value', snap => { _state = norm(snap.val()); _synced = true; cache(); notify(); },
-        err => { console.warn('Firebase unavailable, using local mode:', err && err.message); _ref = null; _synced = true; notify(); });
+        err => { console.warn('Firebase unavailable, using local mode:', err && err.message); _ref = null; _cref = null; _synced = true; _cfgReady = true; notify(); });
       return;
     }
   } catch (e) { console.warn('Firebase init failed:', e); _ref = null; }
-  _synced = true;
+  _synced = true; _cfgReady = true;
   if (typeof window !== 'undefined') window.addEventListener('storage', e => {
     if (e.key === KEY) { try { _state = norm(JSON.parse(e.newValue)); } catch (x) {} notify(); }
+    if (e.key === CKEY) { try { applyCfg(normCfg(JSON.parse(e.newValue))); } catch (x) {} notify(); }
   });
 })();
 
@@ -112,12 +173,12 @@ function maybeClean(s, o) {
 }
 
 /* ---------- order lifecycle: pending -> (waiter accepts) new -> preparing -> ready -> served -> paid ---------- */
-function addOrder(table, items, done) {
+function addOrder(table, items, done, note) {
   mutate(s => {
     s.seq++;
     const total = items.reduce((a, i) => a + i.price * i.qty, 0);
     const o = { id: s.seq, table: table || null, takeaway: !table, items, total,
-      status: 'pending', method: null, paid: false, waiter: null, t: Date.now() };
+      status: 'pending', method: null, paid: false, waiter: null, t: Date.now(), note: String(note || '').slice(0, 200) };
     s.orders.push(o);
     s.orders = s.orders.filter(x => Date.now() - x.t < 3 * 86400e3); // keep 3 days
     s.cleaning = s.cleaning.filter(x => x !== o.table);
@@ -184,6 +245,7 @@ function tableWaiter(s, t) {
 function sendChat(table, from, name, text, kind, done) {
   mutate(s => {
     const k = chatKey(table);
+    text = String(text || '').slice(0, 300);
     s.chat[k] = (s.chat[k] || []).concat([{ t: Date.now(), from, name, text, kind: kind || 'msg' }]).slice(-40);
     const z = zoneObj(table || null);
     s.events.push({ id: ++s.evSeq, t: Date.now(), type: 'chat', from, name, text, kind: kind || 'msg', table: table || null, zone: z.name, zoneId: z.id, waiter: from === 'c' ? tableWaiter(s, table) : name, order: null });
@@ -240,14 +302,14 @@ function seedDemo() {
         if (ex) ex.qty++; else items.push({ id: m.id, name: m.name, price: m.price, qty: 1 + (Math.random() > .7 ? 1 : 0), st: m.st, cat: m.cat });
       }
       s.seq++;
-      s.orders.push({ id: s.seq, table: 1 + Math.floor(Math.random() * TABLES), takeaway: false, items,
+      s.orders.push({ id: s.seq, table: (tableList()[Math.floor(Math.random() * tableList().length)] || 1), takeaway: false, items,
         total: items.reduce((a, i) => a + i.price * i.qty, 0), status: 'served', method: Math.random() > .4 ? 'card' : 'cash',
         paid: true, waiter: Math.random() > .5 ? 'أحمد' : 'ليلى', t, tDone: t + 25 * 60e3 });
     }
   });
   const live = [[7, 'preparing', 10], [8, 'preparing', 6], [2, 'ready', 14], [5, 'ready', 9], [12, 'new', 1]];
   live.forEach(([tb, st, min]) => {
-    const it = [MENU[8], MENU[9], MENU[1]].slice(0, 2 + (tb % 2)).map(m => ({ id: m.id, name: m.name, price: m.price, qty: 1, st: m.st, cat: m.cat }));
+    const it = [MENU[8], MENU[9], MENU[1]].filter(Boolean).slice(0, 2 + (tb % 2)).map(m => ({ id: m.id, name: m.name, price: m.price, qty: 1, st: m.st, cat: m.cat }));
     s.seq++;
     s.orders.push({ id: s.seq, table: tb, takeaway: false, items: it, total: it.reduce((a, i) => a + i.price * i.qty, 0),
       status: st, method: null, paid: false, waiter: tb % 2 ? 'ليلى' : 'أحمد', t: now - min * 60e3, tStart: now - (min - 1) * 60e3 });

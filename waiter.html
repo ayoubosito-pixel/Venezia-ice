@@ -103,13 +103,13 @@ function replyInput(tb) { const i = document.getElementById('ci_' + (tb || 'tk')
 
 function card(o, buttons) {
   return `<div class="c ${o.status}"><div class="h"><span>${where(o)} · ${zoneOf(o.table)}</span><span class="st">${STATUS[o.status]}</span></div>
-  <div class="it">${o.items.map(i => i.qty + '× ' + i.name).join('<br>')}</div>
+  <div class="it">${o.items.map(i => itemHtml(i)).join('<br>')}${o.note ? `<br><small style="color:#ffd27a">📝 الطلب: ${esc(o.note)}</small>` : ''}</div>
   <div class="m">#${o.id} · ${ago(o.t)} · ${money(o.total)}</div>${buttons || ''}</div>`;
 }
 function _draw() {
   if (!me) return;
   const s = load();
-  $('#zl').textContent = 'المنطقة: ' + (zone === 'all' ? 'الكل' : ZONES.find(z => z.id === zone).name) + (cloudOn() ? ' · ☁️ متصل' : ' · ⚠️ وضع محلي');
+  $('#zl').textContent = 'المنطقة: ' + (zone === 'all' ? 'الكل' : (ZONES.find(z => z.id === zone) || { name: 'الكل' }).name) + (cloudOn() ? ' · ☁️ متصل' : ' · ⚠️ وضع محلي');
   const pend = s.orders.filter(o => o.status === 'pending' && inZone(o)).sort((a, b) => a.t - b.t);
   $('#n1').textContent = pend.length;
   $('#l1').innerHTML = pend.map(o => card(o, `<button class="btn big" style="margin-top:10px" onclick="accept(${o.id})">✋ قبول الطلب</button>`)).join('') || '<div class="empty">لا توجد طلبات جديدة</div>';
@@ -129,7 +129,7 @@ function _draw() {
   $('#l3').innerHTML = chats.map(c => {
     const m = s.chat[c.k].slice(-4);
     return `<div class="c new"><div class="h"><span>${c.tb ? 'طاولة ' + c.tb : 'سفري'}</span><span class="st">${zoneOf(c.tb)}</span></div>
-    <div class="it">${m.map(x => (x.from === 'c' ? '👤 ' : '🧑‍🍳 ') + x.text).join('<br>')}</div>
+    <div class="it">${m.map(x => (x.from === 'c' ? '👤 ' : '🧑‍🍳 ') + esc(x.text)).join('<br>')}</div>
     <div class="two" style="margin-bottom:8px"><button class="btn ghost" onclick="reply(${c.tb},'في الطريق إليك 🏃')">في الطريق 🏃</button><button class="btn ghost" onclick="reply(${c.tb},'حاضر ✅')">حاضر ✅</button></div>
     <div style="display:flex;gap:6px"><input class="inp ci" id="ci_${c.k}" placeholder="اكتب ردًا..." onkeydown="if(event.key==='Enter')replyInput(${c.tb})"><button class="btn" onclick="replyInput(${c.tb})">إرسال</button></div></div>`;
   }).join('') || '<div class="empty">لا توجد رسائل</div>';

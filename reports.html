@@ -31,7 +31,7 @@ svg text{fill:#a89d88;font-size:11px}
 <nav class="side"><a href="index.html">☰</a><a href="dashboard.html">▦</a><a href="kds.html">👨‍🍳</a><a class="on" href="reports.html">📊</a><a href="menu.html?table=1">📱</a></nav>
 <div class="main">
  <div class="hd"><div><h1>تقارير الفرع</h1><p>إدارة الأداء المالي والتشغيلي · <span id="dt"></span></p></div>
-  <div class="r"><button class="btn ghost" onclick="seedDemo();draw()">بيانات تجريبية</button><button class="btn" onclick="window.print()">⬇ تصدير PDF</button></div></div>
+  <div class="r"><button class="btn ghost demo-only" onclick="if(confirm('سيحذف الطلبات الحقيقية ويضع بيانات وهمية. متأكد؟')){seedDemo();draw()}">بيانات تجريبية</button><button class="btn" onclick="window.print()">⬇ تصدير PDF</button></div></div>
  <div class="tabs"><button class="on">يومي</button><button disabled style="opacity:.4">أسبوعي</button><button disabled style="opacity:.4">شهري</button></div>
  <div class="kpis" id="kp"></div>
  <div class="g"><div class="card"><h3>نظرة على الإيرادات</h3><div class="sub">المبيعات بالساعة (اليوم)</div><div id="ch"></div></div>
@@ -72,9 +72,9 @@ function draw() {
   const cat = {}; os.forEach(o => o.items.forEach(i => { const c = i.cat || (MENU.find(z => z.id === i.id) || {}).cat; cat[c] = (cat[c] || 0) + i.price * i.qty; }));
   const ct = Object.values(cat).reduce((a, b) => a + b, 0) || 1; let off = 0;
   const R = 42, C = 2 * Math.PI * R;
-  const segs = Object.entries(cat).map(([k, val]) => { const l = val / ct * C, e = `<circle r="${R}" cx="60" cy="60" fill="none" stroke="${CC[k]}" stroke-width="16" stroke-dasharray="${l} ${C - l}" stroke-dashoffset="${-off}" transform="rotate(-90 60 60)"/>`; off += l; return e; }).join('');
+  const segs = Object.entries(cat).map(([k, val]) => { const l = val / ct * C, e = `<circle r="${R}" cx="60" cy="60" fill="none" stroke="${CC[k] || '#c9a227'}" stroke-width="16" stroke-dasharray="${l} ${C - l}" stroke-dashoffset="${-off}" transform="rotate(-90 60 60)"/>`; off += l; return e; }).join('');
   $('#dn').innerHTML = `<svg width="130" viewBox="0 0 120 120">${segs || `<circle r="${R}" cx="60" cy="60" fill="none" stroke="#3a3226" stroke-width="16"/>`}<text x="60" y="58" text-anchor="middle">الإجمالي</text><text x="60" y="74" text-anchor="middle" style="fill:#f6efe3;font-weight:700;font-size:13px">100%</text></svg>
-   <div class="lgd">${Object.entries(cat).map(([k, val]) => `<div><i class="dot" style="background:${CC[k]};margin:0"></i><span>${CATS[k]}<b>${Math.round(val / ct * 100)}%</b></span></div>`).join('')}</div>`;
+   <div class="lgd">${Object.entries(cat).map(([k, val]) => `<div><i class="dot" style="background:${CC[k] || '#c9a227'};margin:0"></i><span>${esc(CATS[k] || k)}<b>${Math.round(val / ct * 100)}%</b></span></div>`).join('')}</div>`;
   // orders table
   $('#tb').innerHTML = os.slice().sort((a, b) => b.t - a.t).slice(0, 8).map(o => `<tr><td>#${o.id}</td><td>${o.table || 'سفري'}</td><td>${o.items.reduce((a, i) => a + i.qty, 0)}</td><td>${money(o.total)}</td><td>${{ card: 'بطاقة', cash: 'كاش', wallet: 'محفظة' }[o.method] || '—'}</td><td><span class="ok">${STATUS[o.status]}</span></td></tr>`).join('') || '<tr><td colspan="6" style="color:var(--muted);text-align:center">لا توجد طلبات اليوم</td></tr>';
 }

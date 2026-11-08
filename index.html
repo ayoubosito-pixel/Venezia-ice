@@ -23,6 +23,7 @@ h1{font-size:28px;margin-bottom:6px}p.s{color:var(--muted);margin-bottom:20px}
  <a href="menu.html?table=1"><span>📱 العميل</span><b>قائمة الطلب</b><span>تجربة ما بعد مسح الـ QR</span></a>
  <a href="dashboard.html"><span>▦ الإدارة</span><b>اللوحة المباشرة</b><span>خريطة الصالة وطابور الطلبات</span></a>
  <a href="waiter.html"><span>🧑‍🍳 النادل</span><b>تطبيق النادل</b><span>تنبيهات صوتية وقبول الطلبات والدفع</span></a>
+ <a href="admin.html"><span>⚙️ الإدارة</span><b>إدارة المنتجات والطاولات</b><span>إضافة منتجات وصور وطاولات مع QR</span></a>
  <a href="kds.html"><span>👨‍🍳 المطبخ</span><b>شاشة KDS</b><span>انتظار / تحضير / جاهز</span></a>
  <a href="reports.html"><span>📊 المدير</span><b>التقارير</b><span>المبيعات والأكثر طلبًا</span></a>
 </div>
@@ -30,13 +31,16 @@ h1{font-size:28px;margin-bottom:6px}p.s{color:var(--muted);margin-bottom:20px}
 <div class="bar"><input class="inp" id="base" placeholder="رابط موقعك بعد النشر مثل https://my-cafe.com/"><button class="btn" onclick="gen()">توليد</button><button class="btn ghost" onclick="window.print()">🖨 طباعة</button></div>
 <p class="s" style="font-size:12px">ملاحظة: بعد رفع المشروع على استضافة (Netlify / GitHub Pages…) ضع رابط المجلد هنا ثم اطبع الأكواد وألصقها على الطاولات.</p></div>
 <div class="qrs" id="qrs"></div></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="store.js"></script>
 <script>
 const base0 = location.href.replace(/index\.html.*$/, '').replace(/[?#].*$/, '');
 document.getElementById('base').value = base0;
 function gen() {
   let b = document.getElementById('base').value.trim(); if (!b.endsWith('/')) b += '/';
   const box = document.getElementById('qrs'); box.innerHTML = '';
-  for (let i = 1; i <= 12; i++) {
+  for (const i of tableList()) {
     const url = b + 'menu.html?table=' + i;
     const d = document.createElement('div'); d.className = 'qc';
     d.innerHTML = `<h4>طاولة ${i}</h4><div class="q"></div><small>امسح للطلب</small>`;
@@ -45,4 +49,6 @@ function gen() {
   }
 }
 gen();
+let _sig = JSON.stringify(tableList());
+_listeners.push(() => { const s = JSON.stringify(tableList()); if (s !== _sig) { _sig = s; gen(); } });
 </script></body></html>

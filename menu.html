@@ -56,6 +56,11 @@ label{display:block;font-size:12px;color:#cfe;margin:12px 0 6px}
 .stp:not(:last-child)::before{content:'';position:absolute;right:11px;top:24px;bottom:0;width:2px;background:var(--bd)}
 .stp .c{width:24px;height:24px;border-radius:50%;background:var(--bd);display:grid;place-items:center;font-size:12px;z-index:1}
 .stp.on{color:var(--tx)}.stp.on .c{background:var(--acc);color:#04210f}
+.pic{overflow:hidden}.pic img{width:100%;height:100%;object-fit:cover}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:30;display:flex;align-items:flex-end;justify-content:center}
+.sh{background:var(--card);border-top:1px solid var(--bd);border-radius:20px 20px 0 0;width:100%;max-width:440px;padding:18px 16px 22px;max-height:88vh;overflow:auto}
+.opts{display:flex;flex-wrap:wrap;gap:8px}.oc{background:var(--card2);border:1px solid var(--bd);padding:9px 14px;border-radius:99px;font-size:13px;color:var(--tx)}.oc.on{background:var(--acc);color:#04210f;border-color:var(--acc);font-weight:700}
+.oc2{font-size:12px;color:#ffd27a;margin-top:3px}
 .empty{text-align:center;color:var(--muted);padding:60px 0}
 .toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:var(--acc);color:#04210f;padding:9px 18px;border-radius:99px;font-weight:700;font-size:13px;z-index:9}
 </style></head>
@@ -67,8 +72,8 @@ label{display:block;font-size:12px;color:#cfe;margin:12px 0 6px}
 <script>
 const q = new URLSearchParams(location.search);
 const table = parseInt(q.get('table')) || null;
-let view = 'menu', cat = 'all', term = '', cart = {};
-try { cart = JSON.parse(sessionStorage.getItem('cart') || '{}'); } catch (e) {}
+let view = 'menu', cat = 'all', term = '', cart = [];
+try { cart = JSON.parse(sessionStorage.getItem('cart') || '[]'); if (!Array.isArray(cart)) cart = []; } catch (e) { cart = []; }
 const SK = 'myOrders_' + (table || 0);
 let myIds = []; try { myIds = JSON.parse(localStorage.getItem(SK) || '[]'); } catch (e) {}
 function saveIds() { localStorage.setItem(SK, JSON.stringify(myIds)); }
@@ -77,49 +82,81 @@ function chatMsgs() { const s = load(); return (s.chat && s.chat[table || 'tk'])
 function unread() { return chatMsgs().filter(m => m.from === 'w' && m.t > seenChat).length; }
 if (myIds.length) view = 'track';
 const $ = s => document.querySelector(s);
-const items = () => Object.entries(cart).filter(([, v]) => v > 0).map(([id, qty]) => { const m = MENU.find(x => x.id == id); return { ...m, qty }; });
+const prod = id => MENU.find(x => x.id == id);
+const items = () => cart.map(l => { const m = prod(l.id); return m ? { ...m, qty: l.qty, opts: l.opts || [], note: l.note || '', k: l.k } : null; }).filter(Boolean);
 const count = () => items().reduce((a, i) => a + i.qty, 0);
 const sub = () => items().reduce((a, i) => a + i.price * i.qty, 0);
 const FEE = 0.5;
-function setQty(id, d) { cart[id] = Math.max(0, (cart[id] || 0) + d); sessionStorage.setItem('cart', JSON.stringify(cart)); render(); }
+let orderNote = sessionStorage.getItem('onote') || '';
+function saveCart() { sessionStorage.setItem('cart', JSON.stringify(cart)); }
+const qtyOf = id => cart.filter(l => l.id == id).reduce((a, l) => a + l.qty, 0);
+function addLine(id, opts, note) {
+  opts = opts || []; note = (note || '').trim();
+  const ex = cart.find(l => l.id == id && !l.note && !note && JSON.stringify(l.opts || []) === JSON.stringify(opts));
+  if (ex) ex.qty++; else cart.push({ k: Date.now() + '_' + Math.floor(Math.random() * 1e6), id, qty: 1, opts, note });
+  saveCart(); render();
+}
+function lineQty(k, d) { const l = cart.find(x => x.k === k); if (!l) return; l.qty += d; if (l.qty <= 0) cart = cart.filter(x => x !== l); saveCart(); render(); }
+function prodMinus(id) { const ls = cart.filter(l => l.id == id); if (ls.length) lineQty(ls[ls.length - 1].k, -1); }
+function plus(id) { const m = prod(id); if (m && (m.opts || []).some(g => OPTION_GROUPS[g])) openSheet(id); else addLine(id); }
+function setNote(k, v) { const l = cart.find(x => x.k === k); if (l) { l.note = v.slice(0, 120); saveCart(); } }
+const pic = m => m.img ? `<img src="${m.img}" alt="">` : esc(m.emoji || '🍽');
+/* option sheet: pick sugar / salt / ... + a free note before adding */
+let sheet = null;
+function openSheet(id) { const m = prod(id); sheet = { id, sel: {}, note: '' }; (m.opts || []).forEach(g => { if (OPTION_GROUPS[g]) sheet.sel[g] = OPTION_GROUPS[g].def; }); render(); }
+function pick(g, v) { sheet.sel[g] = v; render(); }
+function closeSheet() { sheet = null; render(); }
+function confirmSheet() { const m = prod(sheet.id); const opts = (m.opts || []).filter(g => OPTION_GROUPS[g]).map(g => sheet.sel[g]); const note = sheet.note; sheet = null; addLine(m.id, opts, note); }
+function sheetHtml() {
+  if (!sheet) return '';
+  const m = prod(sheet.id);
+  return `<div class="ov" onclick="if(event.target===this)closeSheet()"><div class="sh"><div class="row"><b style="font-size:17px">${esc(m.name)}</b><span class="price">${money(m.price)}</span></div>
+  ${(m.opts || []).filter(g => OPTION_GROUPS[g]).map(g => `<label>${OPTION_GROUPS[g].name}</label><div class="opts">${OPTION_GROUPS[g].choices.map(c => `<button class="oc ${sheet.sel[g] === c ? 'on' : ''}" onclick="pick('${g}','${c}')">${c}</button>`).join('')}</div>`).join('')}
+  <label>ملاحظة خاصة بهذا الصنف (اختياري)</label><input class="inp" style="direction:rtl;text-align:right" maxlength="120" value="${esc(sheet.note)}" oninput="sheet.note=this.value" placeholder="مثال: ساخن جدًا، بدون حليب...">
+  <button class="btn" style="width:100%;margin-top:14px;padding:14px" onclick="confirmSheet()">أضف للسلة</button></div></div>`;
+}
 function go(v) { view = v; render(); scrollTo(0, 0); }
 function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 1800); }
 
 function qtyCtl(id) {
-  const n = cart[id] || 0;
-  return `<div class="qty"><button class="p" onclick="setQty(${id},1)">+</button>${n ? `<span>${n}</span><button onclick="setQty(${id},-1)">−</button>` : ''}</div>`;
+  const n = qtyOf(id);
+  return `<div class="qty"><button class="p" onclick="plus(${id})">+</button>${n ? `<span>${n}</span><button onclick="prodMinus(${id})">−</button>` : ''}</div>`;
 }
+function lineCtl(k, n) { return `<div class="qty"><button class="p" onclick="lineQty('${k}',1)">+</button><span>${n}</span><button onclick="lineQty('${k}',-1)">−</button></div>`; }
 function nav() {
   const b = (v, i, t, extra = '') => `<button class="${view === v ? 'on' : ''}" onclick="go('${v}')"><i>${i}</i>${t}${extra}</button>`;
   return `<nav class="bot">${b('menu', '🏠', 'القائمة')}${b('cart', '🛒', 'السلة', count() ? `<span class="badge">${count()}</span>` : '')}${b('track', '📋', 'طلبي')}${myIds.length ? b('chat', '💬', 'النادل', unread() ? `<span class="badge">${unread()}</span>` : '') : ''}</nav>`;
 }
 function vMenu() {
-  const list = MENU.filter(m => (cat === 'all' || m.cat === cat) && m.name.includes(term));
+  if (cat !== 'all' && !CATS[cat]) cat = 'all';
+  const list = MENU.filter(m => !m.hidden && (cat === 'all' || m.cat === cat) && m.name.includes(term));
   return `<header><div class="ic">☰</div><span>${table ? 'طاولة ' + table : 'طلب سفري'}</span><div class="ic" onclick="go('cart')">🛒</div></header>
   <span class="online">${cloudOn() ? '● متصل' : '● وضع محلي'}</span>
-  <input class="search" placeholder="🔍 ابحث عن منتج..." value="${term}" oninput="term=this.value;render(true)">
-  <div class="chips">${['all', ...Object.keys(CATS)].map(c => `<div class="chip ${cat === c ? 'on' : ''}" onclick="cat='${c}';render()">${c === 'all' ? 'الكل' : CATS[c]}</div>`).join('')}</div>
-  <div class="grid">${list.map(m => `<div class="item"><div class="pic">${m.emoji}</div><div class="in"><b>${m.name}</b><div class="row"><span class="price">${money(m.price)}</span>${qtyCtl(m.id)}</div></div></div>`).join('') || '<div class="empty" style="grid-column:1/-1">لا توجد نتائج</div>'}</div>${nav()}`;
+  <input class="search" placeholder="🔍 ابحث عن منتج..." value="${esc(term)}" oninput="term=this.value;render(true)">
+  <div class="chips">${['all', ...Object.keys(CATS)].map(c => `<div class="chip ${cat === c ? 'on' : ''}" onclick="cat='${c}';render()">${c === 'all' ? 'الكل' : esc(CATS[c])}</div>`).join('')}</div>
+  <div class="grid">${list.map(m => `<div class="item"><div class="pic">${pic(m)}</div><div class="in"><b>${esc(m.name)}</b><div class="row"><span class="price">${money(m.price)}</span>${qtyCtl(m.id)}</div></div></div>`).join('') || '<div class="empty" style="grid-column:1/-1">لا توجد نتائج</div>'}</div>${nav()}${sheetHtml()}`;
 }
 function vCart() {
   const it = items();
   if (!it.length) return `<div class="page"><div class="title">مراجعة السلة</div><div class="empty">🛒<br>السلة فارغة</div></div>${nav()}`;
   return `<div class="page"><div class="row"><div class="title">مراجعة السلة</div><small style="color:var(--muted)">${count()} عناصر</small></div>
-  ${it.map(i => `<div class="line"><div class="e">${i.emoji}</div><div class="nm"><b>${i.name}</b><br><small>${money(i.price)}</small><button class="rm" onclick="setQty(${i.id},-${i.qty})">حذف</button></div>${qtyCtl(i.id)}</div>`).join('')}
+  ${it.map(i => `<div class="line" style="flex-wrap:wrap"><div class="e" style="overflow:hidden">${pic(i)}</div><div class="nm"><b>${esc(i.name)}</b>${i.opts.length ? `<div class="oc2">${esc(i.opts.join(' · '))}</div>` : ''}<small>${money(i.price)}</small><button class="rm" onclick="lineQty('${i.k}',-${i.qty})">حذف</button></div>${lineCtl(i.k, i.qty)}
+  <input class="inp" style="direction:rtl;text-align:right;width:100%;margin-top:6px;padding:9px;font-size:13px" maxlength="120" placeholder="📝 ملاحظة على هذا الصنف..." value="${esc(i.note)}" oninput="setNote('${i.k}',this.value)"></div>`).join('')}
+  <label>📝 ملاحظة على الطلب كاملًا (اختياري)</label><textarea class="inp" rows="2" maxlength="200" style="direction:rtl;text-align:right" placeholder="مثال: أريد كل شيء معًا، حساسية من المكسرات..." oninput="orderNote=this.value;sessionStorage.setItem('onote',this.value)">${esc(orderNote)}</textarea>
   <div class="sum"><div class="row"><span>المجموع الفرعي</span><span>${money(sub())}</span></div><div class="row"><span>رسوم الخدمة</span><span>${money(FEE)}</span></div><div class="row t"><span>الإجمالي</span><span class="price">${money(sub() + FEE)}</span></div></div><div class="note" style="margin-top:12px">💡 الدفع يتم بعد انتهائك عبر النادل: كاش أو بجهاز البطاقة.</div></div>
   <div class="cta"><button class="btn" onclick="sendOrder()">إرسال الطلب للنادل ✓</button></div>`;
 }
 let finished = false;
 function sendOrder() {
   unlockAudio();
-  const it = items().map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, st: i.st, cat: i.cat }));
+  const it = items().map(i => ({ id: i.id, name: i.name, price: i.price, qty: i.qty, st: i.st, cat: i.cat, opts: i.opts, note: i.note }));
   if (!it.length) return toast('السلة فارغة');
   toast('جاري الإرسال...');
   addOrder(table, it, o => {
     if (!o) return toast('تعذر الإرسال، تحقق من الاتصال بالإنترنت');
     finished = false; myIds.push(o.id); saveIds();
-    cart = {}; sessionStorage.removeItem('cart'); go('track');
-  });
+    cart = []; orderNote = ''; sessionStorage.removeItem('cart'); sessionStorage.removeItem('onote'); go('track');
+  }, orderNote);
 }
 function reqPayT(m) { unlockAudio(); requestPayTable(table, m); toast(m === 'cash' ? 'تم إبلاغ النادل — جهّز المبلغ' : 'تم إبلاغ النادل — سيحضر جهاز الدفع'); }
 function callWaiter() { unlockAudio(); sendChat(table, 'c', 'الزبون', '🙋 الزبون ينادي النادل', 'call', ok => toast(ok ? 'تم إبلاغ النادل 🙋' : 'تعذر الإرسال')); }
@@ -143,7 +180,7 @@ function vTrack() {
     const lbl = ['تم إرسال الطلب — بانتظار النادل', 'النادل ' + (o.waiter || '') + ' استلم طلبك', 'قيد التحضير 👨‍🍳', 'طلبك جاهز — النادل ' + (o.waiter || '') + ' قادم إليك 🎉', 'تم التقديم — بالهنا!'][idx];
     return `<div class="sum" style="margin-bottom:12px"><div class="row"><b>فاتورة #${o.id}</b><span class="price">${o.paid ? 'مدفوع ✓' : money(o.total + FEE)}</span></div>
     <div style="margin:8px 0 4px;font-weight:700;color:${o.status === 'ready' ? 'var(--acc)' : 'inherit'}">${lbl}</div><div class="bar"><i style="width:${(idx + 1) * 20}%"></i></div>
-    ${o.items.map(i => `<div class="row" style="font-size:13px"><span>${i.qty}× ${i.name}</span><span>${money(i.price * i.qty)}</span></div>`).join('')}</div>`;
+    ${o.items.map(i => `<div class="row" style="font-size:13px"><span>${itemHtml(i)}</span><span>${money(i.price * i.qty)}</span></div>`).join('')}${o.note ? `<div class="oc2" style="margin-top:6px">📝 ${esc(o.note)}</div>` : ''}</div>`;
   }).join('');
   const payable = act.filter(o => !o.paid && o.status !== 'pending');
   const req = payable.find(o => o.payReq);
@@ -160,7 +197,7 @@ function vChat() {
   const m = chatMsgs();
   const wn = (() => { const s = load(); return tableWaiter(s, table); })();
   return `<div class="page"><div class="title">💬 التواصل مع النادل${wn ? ' ' + wn : ''}</div>
-  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;min-height:120px">${m.length ? m.map(x => `<div style="align-self:${x.from === 'c' ? 'flex-start' : 'flex-end'};max-width:80%;background:${x.from === 'c' ? 'var(--acc)' : 'var(--card2)'};color:${x.from === 'c' ? '#04210f' : 'var(--tx)'};padding:9px 13px;border-radius:14px;font-size:14px">${x.from === 'w' ? '<small style="opacity:.7;display:block">' + x.name + '</small>' : ''}${x.text}</div>`).join('') : '<div class="empty" style="padding:30px 0">اكتب رسالة أو اضغط أحد الأزرار</div>'}</div>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;min-height:120px">${m.length ? m.map(x => `<div style="align-self:${x.from === 'c' ? 'flex-start' : 'flex-end'};max-width:80%;background:${x.from === 'c' ? 'var(--acc)' : 'var(--card2)'};color:${x.from === 'c' ? '#04210f' : 'var(--tx)'};padding:9px 13px;border-radius:14px;font-size:14px">${x.from === 'w' ? '<small style="opacity:.7;display:block">' + esc(x.name) + '</small>' : ''}${esc(x.text)}</div>`).join('') : '<div class="empty" style="padding:30px 0">اكتب رسالة أو اضغط أحد الأزرار</div>'}</div>
   <div class="two" style="margin-bottom:8px"><button class="btn ghost" onclick="callWaiter()">🙋 نادِ النادل</button><button class="btn ghost" onclick="quick('💧 أريد ماء')">💧 ماء</button><button class="btn ghost" onclick="quick('🧂 أحتاج أدوات إضافية')">🧂 أدوات</button><button class="btn ghost" onclick="quick('⚠️ عندي ملاحظة على الطلب')">⚠️ ملاحظة</button></div>
   <div style="display:flex;gap:8px"><input id="cmsg" class="inp" style="direction:rtl;text-align:right" placeholder="اكتب رسالتك..." onkeydown="if(event.key==='Enter')sendMsg()"><button class="btn" onclick="sendMsg()">إرسال</button></div></div>${nav()}`;
 }

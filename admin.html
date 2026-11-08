@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>إدارة المطعم</title>
+<link rel="stylesheet" href="shared.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+:root{--bg:#121110;--card:#1b1917;--bd:#2c2926;--tx:#f1ece6;--acc:#ff6a1a}
+.w{max-width:900px;margin:0 auto;padding:14px 14px 60px}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.hd h1{font-size:22px}.hd a{color:var(--muted);font-size:13px}
+.tabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:14px;scrollbar-width:none}
+.tabs button{background:var(--card);border:1px solid var(--bd);color:var(--muted);padding:10px 16px;border-radius:10px;white-space:nowrap;font-size:14px}
+.tabs button.on{background:var(--acc);color:#111;font-weight:700;border-color:var(--acc)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.inp{width:100%;background:#201d1b;border:1px solid var(--bd);border-radius:10px;padding:11px;outline:none}
+.inp:focus{border-color:var(--acc)}
+select.inp{appearance:auto}
+label{display:block;font-size:12px;color:var(--muted);margin:12px 0 5px}
+h3.sec{font-size:13px;color:var(--muted);margin:18px 0 8px;font-weight:600}
+.p{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px;margin-bottom:8px}
+.p.off{opacity:.5}
+.pi{width:58px;height:58px;border-radius:10px;background:#0f0e0d;display:grid;place-items:center;font-size:30px;overflow:hidden;flex:0 0 auto}
+.pi img{width:100%;height:100%;object-fit:cover}
+.pm{flex:1;min-width:0}.pm b{display:block;font-size:15px}.pm small{color:var(--muted);font-size:12px}
+.ac{display:flex;gap:6px}.ac button{background:#2a2623;color:var(--tx);width:38px;height:38px;border-radius:10px;font-size:16px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:#2a2623;border-radius:99px;padding:6px 8px 6px 12px;margin:0 0 6px 6px;font-weight:700}
+.chip button{background:#3a3532;color:#ff8a8a;width:22px;height:22px;border-radius:50%;font-size:12px}
+.zc{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin-bottom:12px}
+.zc .row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.zc .row b{font-size:16px}
+.mod{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:40;display:none;align-items:center;justify-content:center;padding:12px}
+.mod.on{display:flex}
+.mb{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:16px;width:min(480px,100%);max-height:92vh;overflow:auto}
+.chk{display:flex;gap:8px;flex-wrap:wrap}.chk label{display:flex;align-items:center;gap:6px;margin:0;background:#201d1b;border:1px solid var(--bd);border-radius:99px;padding:8px 12px;color:var(--tx);font-size:13px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.prev{width:96px;height:96px;border-radius:12px;background:#0f0e0d;display:grid;place-items:center;font-size:44px;overflow:hidden}.prev img{width:100%;height:100%;object-fit:cover}
+.qrs{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.qc{background:#fff;color:#111;border-radius:14px;padding:14px;text-align:center}
+.qc small{display:block;font-size:11px;color:#555}.qc h4{font-size:22px;margin:2px 0 8px}.qc .q{display:grid;place-items:center;min-height:130px;word-break:break-all;font-size:9px}
+.gate{min-height:90vh;display:flex;flex-direction:column;justify-content:center;gap:12px;max-width:340px;margin:0 auto;padding:20px}
+.gate h1{font-size:24px}.gate p{color:var(--muted);font-size:13px}
+.toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:var(--acc);color:#111;padding:10px 18px;border-radius:99px;font-weight:700;font-size:13px;z-index:99}
+.empty{color:var(--muted);text-align:center;padding:24px 0;font-size:14px}
+.warn{background:#2b2212;border:1px solid #5a4516;border-radius:10px;padding:10px;font-size:12px;color:#e9c46a;margin-bottom:12px}
+@media print{.noprint{display:none!important}body{background:#fff}.w{padding:0}.qc{break-inside:avoid;border:1px solid #bbb}}
+</style></head><body>
+
+<div id="gate" class="gate" hidden>
+ <h1>⚙️ إدارة المطعم</h1><p>أدخل رمز الإدارة للمتابعة. الرمز الافتراضي <b>1234</b> — غيّره من تبويب «الإعدادات» بعد الدخول.</p>
+ <input id="pin" class="inp" type="password" inputmode="numeric" placeholder="رمز الإدارة" onkeydown="if(event.key==='Enter')unlock()">
+ <button class="btn" style="padding:13px" onclick="unlock()">دخول</button>
+</div>
+
+<div id="app" class="w" hidden>
+ <div class="hd noprint"><h1>⚙️ إدارة المطعم</h1><div><a href="index.html">← الرئيسية</a> · <a href="#" onclick="lock();return false">خروج</a></div></div>
+ <div class="tabs noprint" id="tabs"></div>
+ <div id="main"></div>
+</div>
+
+<div class="mod" id="mod"><div class="mb" id="mb"></div></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="store.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+let tab = 'products', ed = null, showQR = false;
+let base = localStorage.getItem('adm_base') || location.href.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
+let nzName = '', nzCount = 4, ncName = '';
+
+function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 2200); }
+const fail = () => toast('تعذر الحفظ، تحقق من الاتصال بالإنترنت');
+
+/* ---------- PIN gate ---------- */
+function show() {
+  const ok = sessionStorage.getItem('adm') === '1';
+  $('#gate').hidden = ok; $('#app').hidden = !ok;
+  if (ok) render(true);
+}
+function unlock() {
+  if (!cfgReady()) return toast('جاري تحميل الإعدادات... أعد المحاولة بعد ثانية');
+  if ($('#pin').value === cfgPin()) { sessionStorage.setItem('adm', '1'); show(); } else toast('الرمز غير صحيح');
+}
+function lock() { sessionStorage.removeItem('adm'); show(); }
+
+/* ---------- helpers ---------- */
+const pic = m => m.img ? `<img src="${m.img}" alt="">` : esc(m.emoji || '🍽');
+function activeAt(n) { return load().orders.some(o => o.table === n && !(o.paid && o.status === 'served')); }
+function readImg(file, cb) {
+  const fr = new FileReader();
+  fr.onload = () => {
+    const im = new Image();
+    im.onload = () => {
+      const max = 480, sc = Math.min(1, max / Math.max(im.width, im.height));
+      const w = Math.round(im.width * sc), h = Math.round(im.height * sc);
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.drawImage(im, 0, 0, w, h);
+      let q = 0.78, d = c.toDataURL('image/jpeg', q);
+      while (d.length > 130000 && q > 0.3) { q -= 0.1; d = c.toDataURL('image/jpeg', q); }
+      cb(d);
+    };
+    im.onerror = () => toast('تعذر قراءة الصورة');
+    im.src = fr.result;
+  };
+  fr.readAsDataURL(file);
+}
+
+/* ---------- render (skipped when nothing relevant changed or while typing) ---------- */
+let _sig = '';
+function render(force) {
+  if (sessionStorage.getItem('adm') !== '1') return;
+  const a = document.activeElement;
+  if (!force && a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && $('#main').contains(a)) return;
+  const sig = JSON.stringify([tab, _cfg, showQR, base]);
+  if (!force && sig === _sig) return;
+  _sig = sig;
+  $('#tabs').innerHTML = [['products', '🍽 المنتجات'], ['cats', '🗂 الفئات'], ['tables', '🪑 الصالات والطاولات'], ['settings', '🔐 الإعدادات']]
+    .map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" onclick="tab='${k}';render(true)">${l}</button>`).join('');
+  $('#main').innerHTML = { products: vProducts, cats: vCats, tables: vTables, settings: vSettings }[tab]();
+  if (tab === 'tables' && showQR) drawQR();
+}
+_listeners.push(() => render());
+
+/* ---------- products ---------- */
+function vProducts() {
+  const groups = Object.keys(CATS).map(k => ({ k, n: CATS[k], l: MENU.filter(m => m.cat === k) }));
+  const other = MENU.filter(m => !CATS[m.cat]);
+  if (other.length) groups.push({ k: '', n: 'بدون فئة', l: other });
+  const row = m => `<div class="p ${m.hidden ? 'off' : ''}"><div class="pi">${pic(m)}</div>
+    <div class="pm"><b>${esc(m.name)} ${m.hidden ? '<span class="pill">مخفي</span>' : ''}</b><small>${money(m.price)} · ${esc(STATIONS[m.st] || m.st)}${m.opts.length ? ' · ' + m.opts.filter(g => OPTION_GROUPS[g]).map(g => OPTION_GROUPS[g].name).join('، ') : ''}</small></div>
+    <div class="ac"><button title="إخفاء/إظهار" onclick="toggleProd(${m.id})">${m.hidden ? '🙈' : '👁'}</button><button title="تعديل" onclick="editProd(${m.id})">✏️</button><button title="حذف" onclick="delProd(${m.id})">🗑</button></div></div>`;
+  return `<div class="bar"><button class="btn" onclick="editProd()">＋ إضافة منتج</button><span class="pill">${MENU.length} منتج</span></div>
+  <div class="warn">المنتجات والصور تظهر مباشرة في صفحة طلب الزبون بعد الحفظ.</div>
+  ${groups.map(g => `<h3 class="sec">${esc(g.n)} (${g.l.length})</h3>${g.l.map(row).join('') || '<div class="empty">لا منتجات</div>'}`).join('') || '<div class="empty">أضف فئة أولًا من تبويب «الفئات»</div>'}`;
+}
+function toggleProd(id) { cfgMutate(c => { const m = c.menu.find(x => x.id === id); if (!m) return false; m.hidden = !m.hidden; return true; }, null, fail); }
+function delProd(id) { const m = MENU.find(x => x.id === id); if (m && confirm('حذف «' + m.name + '» نهائيًا؟ (الطلبات السابقة لا تتأثر)')) cfgMutate(c => { c.menu = c.menu.filter(x => x.id !== id); return true; }, () => toast('تم الحذف'), fail); }
+function editProd(id) {
+  const m = id ? MENU.find(x => x.id === id) : null;
+  ed = m ? { ...m, opts: m.opts.slice() } : { id: null, name: '', price: '', cat: Object.keys(CATS)[0] || '', st: 'bar', emoji: '🍽', img: '', opts: [], hidden: false };
+  if (!Object.keys(CATS).length) return toast('أضف فئة أولًا من تبويب «الفئات»');
+  $('#mb').innerHTML = `<h2 style="margin-bottom:6px">${m ? 'تعديل منتج' : 'إضافة منتج'}</h2>
+  <label>اسم المنتج</label><input id="f_name" class="inp" maxlength="60" value="${esc(ed.name)}" placeholder="مثال: موكا">
+  <div class="two"><div><label>السعر ($)</label><input id="f_price" class="inp" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(ed.price)}"></div>
+  <div><label>الفئة</label><select id="f_cat" class="inp">${Object.keys(CATS).map(k => `<option value="${k}" ${ed.cat === k ? 'selected' : ''}>${esc(CATS[k])}</option>`).join('')}</select></div></div>
+  <div class="two"><div><label>يُحضَّر في</label><select id="f_st" class="inp">${Object.keys(STATIONS).map(k => `<option value="${k}" ${ed.st === k ? 'selected' : ''}>${STATIONS[k]}</option>`).join('')}</select></div>
+  <div><label>رمز تعبيري (بديل الصورة)</label><input id="f_emoji" class="inp" maxlength="4" value="${esc(ed.emoji)}"></div></div>
+  <label>صورة المنتج</label>
+  <div style="display:flex;gap:12px;align-items:center"><div class="prev" id="f_prev">${pic(ed)}</div>
+   <div style="display:flex;flex-direction:column;gap:8px"><input id="f_file" type="file" accept="image/*" style="display:none" onchange="pickImg(this)"><button class="btn ghost" onclick="$('#f_file').click()">📷 اختر صورة</button><button class="btn ghost" onclick="ed.img='';$('#f_prev').innerHTML=pic(ed)">إزالة الصورة</button></div></div>
+  <label>خيارات يختارها الزبون</label>
+  <div class="chk">${Object.keys(OPTION_GROUPS).map(g => `<label><input type="checkbox" value="${g}" ${ed.opts.includes(g) ? 'checked' : ''}> ${OPTION_GROUPS[g].name}</label>`).join('')}</div>
+  <label style="display:flex;align-items:center;gap:8px;color:var(--tx)"><input type="checkbox" id="f_hidden" ${ed.hidden ? 'checked' : ''}> إخفاء المنتج عن الزبائن مؤقتًا</label>
+  <div class="bar" style="margin-top:16px"><button class="btn" style="flex:1;padding:13px" onclick="saveProd()">حفظ</button><button class="btn ghost" onclick="closeMod()">إلغاء</button></div>`;
+  $('#mod').classList.add('on');
+}
+function pickImg(inp) { const f = inp.files[0]; if (f) readImg(f, d => { ed.img = d; $('#f_prev').innerHTML = pic(ed); }); }
+function closeMod() { $('#mod').classList.remove('on'); ed = null; }
+function saveProd() {
+  const name = $('#f_name').value.trim(), price = parseFloat($('#f_price').value);
+  if (!name) return toast('اكتب اسم المنتج');
+  if (!(price >= 0)) return toast('اكتب السعر');
+  const p = { name, price: Math.round(price * 100) / 100, cat: $('#f_cat').value, st: $('#f_st').value, emoji: $('#f_emoji').value.trim() || '🍽', img: ed.img || '',
+    opts: [...document.querySelectorAll('.chk input:checked')].map(i => i.value), hidden: $('#f_hidden').checked };
+  const id = ed.id;
+  cfgMutate(c => {
+    if (id) { const i = c.menu.findIndex(x => x.id === id); if (i < 0) return false; c.menu[i] = { ...c.menu[i], ...p }; }
+    else c.menu.push({ id: Math.max(0, ...c.menu.map(x => x.id)) + 1, ...p });
+    return true;
+  }, () => { toast('تم الحفظ ✓ — ظهر عند الزبائن'); closeMod(); render(true); }, fail);
+}
+
+/* ---------- categories ---------- */
+function vCats() {
+  return `<div class="bar"><input class="inp" style="flex:1;min-width:180px" id="nc" placeholder="اسم فئة جديدة" value="${esc(ncName)}" oninput="ncName=this.value"><button class="btn" onclick="addCat()">＋ إضافة</button></div>
+  ${Object.keys(CATS).map(k => `<div class="p"><div class="pm"><b>${esc(CATS[k])}</b><small>${MENU.filter(m => m.cat === k).length} منتج</small></div><div class="ac"><button onclick="renCat('${k}')">✏️</button><button onclick="delCat('${k}')">🗑</button></div></div>`).join('') || '<div class="empty">لا توجد فئات</div>'}`;
+}
+function addCat() { const n = ncName.trim(); if (!n) return toast('اكتب اسم الفئة'); ncName = ''; cfgMutate(c => { c.cats['c' + Date.now().toString(36)] = n; return true; }, () => { toast('تمت الإضافة'); render(true); }, fail); }
+function renCat(k) { const n = prompt('الاسم الجديد للفئة', CATS[k]); if (n && n.trim()) cfgMutate(c => { c.cats[k] = n.trim(); return true; }, null, fail); }
+function delCat(k) {
+  if (MENU.some(m => m.cat === k)) return toast('انقل منتجات هذه الفئة أو احذفها أولًا');
+  if (confirm('حذف الفئة «' + CATS[k] + '»؟')) cfgMutate(c => { delete c.cats[k]; return true; }, null, fail);
+}
+
+/* ---------- zones & tables ---------- */
+function nextTable(c) { return Math.max(0, ...c.zones.reduce((a, z) => a.concat(z.tables), [])) + 1; }
+function vTables() {
+  const zones = ZONES.filter(z => z.id !== 'tk');
+  return `<div class="noprint">
+  <div class="warn">كل صالة أو ركن له أرقام طاولات تلقائية، ولكل طاولة باركود (QR) خاص بها. اطبع الأكواد وألصقها على الطاولات.</div>
+  <div class="zc"><b>＋ إضافة صالة أو ركن جديد</b>
+   <div class="two"><div><label>الاسم</label><input class="inp" placeholder="مثال: الحديقة" value="${esc(nzName)}" oninput="nzName=this.value"></div><div><label>عدد الطاولات</label><input class="inp" type="number" min="0" max="60" value="${nzCount}" oninput="nzCount=parseInt(this.value)||0"></div></div>
+   <button class="btn" style="margin-top:10px" onclick="addZone()">إضافة</button></div>
+  ${zones.map(z => `<div class="zc"><div class="row"><b>${esc(z.name)}</b><div class="ac"><button onclick="addTable('${z.id}')" title="طاولة جديدة">＋🪑</button><button onclick="renZone('${z.id}')">✏️</button><button onclick="delZone('${z.id}')">🗑</button></div></div>
+   ${z.tables.slice().sort((a, b) => a - b).map(n => `<span class="chip">طاولة ${n}<button onclick="delTable('${z.id}',${n})">✕</button></span>`).join('') || '<div class="empty" style="padding:8px">لا توجد طاولات</div>'}</div>`).join('') || '<div class="empty">لا توجد صالات</div>'}
+  <h3 class="sec">أكواد الطاولات (QR)</h3>
+  <div class="bar"><input class="inp" style="flex:1;min-width:220px;direction:ltr;text-align:left" value="${esc(base)}" onchange="base=this.value.trim();localStorage.setItem('adm_base',base);render(true)" placeholder="رابط موقعك بعد النشر"><button class="btn" onclick="showQR=true;render(true)">توليد الأكواد</button>${showQR ? '<button class="btn ghost" onclick="window.print()">🖨 طباعة</button>' : ''}</div>
+  <div class="warn">الرابط يجب أن يكون رابط موقعك المنشور (مثل https://اسمك.github.io/Venezia-ice/) وليس رابطًا محليًا، حتى يعمل الباركود من هواتف الزبائن.</div></div>
+  <div class="qrs" id="qrs"></div>`;
+}
+function drawQR() {
+  const b = base.endsWith('/') ? base : base + '/';
+  const box = $('#qrs'); box.innerHTML = '';
+  const add = (title, zone, url) => {
+    const d = document.createElement('div'); d.className = 'qc';
+    d.innerHTML = `<small>${esc(zone)}</small><h4>${esc(title)}</h4><div class="q"></div><small>امسح للطلب</small>`;
+    box.appendChild(d);
+    try { new QRCode(d.querySelector('.q'), { text: url, width: 130, height: 130 }); } catch (e) { d.querySelector('.q').textContent = url; }
+  };
+  ZONES.filter(z => z.id !== 'tk').forEach(z => z.tables.slice().sort((x, y) => x - y).forEach(n => add('طاولة ' + n, z.name, b + 'menu.html?table=' + n)));
+  add('طلب سفري', 'بدون طاولة', b + 'menu.html');
+}
+function addZone() {
+  const n = nzName.trim(); if (!n) return toast('اكتب اسم الصالة');
+  const cnt = Math.max(0, Math.min(60, nzCount || 0));
+  cfgMutate(c => {
+    let nx = nextTable(c); const tb = [];
+    for (let i = 0; i < cnt; i++) tb.push(nx++);
+    c.zones.push({ id: 'z' + Date.now().toString(36), name: n, tables: tb });
+    return tb;
+  }, tb => { nzName = ''; toast(tb.length ? 'تمت الإضافة — الطاولات ' + tb[0] + (tb.length > 1 ? ' إلى ' + tb[tb.length - 1] : '') : 'تمت الإضافة'); render(true); }, fail);
+}
+function addTable(zid) {
+  cfgMutate(c => { const z = c.zones.find(x => x.id === zid); if (!z) return false; const n = nextTable(c); z.tables.push(n); return n; }, n => toast('تمت إضافة طاولة ' + n), fail);
+}
+function delTable(zid, n) {
+  if (activeAt(n)) return toast('عليها طلبات غير مكتملة الآن');
+  if (confirm('حذف طاولة ' + n + '؟ (لن يعمل باركودها بعد ذلك)')) cfgMutate(c => { const z = c.zones.find(x => x.id === zid); if (!z) return false; z.tables = z.tables.filter(x => x !== n); return true; }, null, fail);
+}
+function renZone(zid) { const z = ZONES.find(x => x.id === zid); const n = prompt('الاسم الجديد', z.name); if (n && n.trim()) cfgMutate(c => { const q = c.zones.find(x => x.id === zid); if (!q) return false; q.name = n.trim(); return true; }, null, fail); }
+function delZone(zid) {
+  const z = ZONES.find(x => x.id === zid);
+  if (z.tables.length) return toast('احذف طاولات هذه الصالة أولًا');
+  if (confirm('حذف «' + z.name + '»؟')) cfgMutate(c => { c.zones = c.zones.filter(x => x.id !== zid); return true; }, null, fail);
+}
+
+/* ---------- settings ---------- */
+function vSettings() {
+  return `<div class="zc"><b>تغيير رمز الإدارة</b><label>الرمز الجديد (4 أرقام أو أكثر)</label><input id="np" class="inp" type="password" inputmode="numeric"><button class="btn" style="margin-top:10px" onclick="setPin()">حفظ الرمز</button>
+  <div class="warn" style="margin-top:12px">الرمز يمنع الفضوليين فقط ولا يُعد حماية كاملة، لأن قاعدة البيانات في وضع الاختبار. أضف تسجيل دخول حقيقيًا قبل التشغيل الفعلي.</div></div>`;
+}
+function setPin() { const v = $('#np').value.trim(); if (v.length < 4) return toast('الرمز قصير'); cfgMutate(c => { c.pin = v; return true; }, () => { toast('تم تغيير الرمز'); $('#np').value = ''; }, fail); }
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeMod(); });
+show();
+</script></body></html>

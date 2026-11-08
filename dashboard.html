@@ -50,6 +50,7 @@
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:20}.modal.on{display:grid}
 .box{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:18px;width:min(380px,92vw)}
 .box .row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
+.map{height:auto!important;min-height:340px;overflow:auto!important;padding:10px}.t{position:relative!important;right:auto!important;top:auto!important}.tg{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}.zn{font-size:12px;color:var(--muted);margin:4px 0 8px}
 </style></head>
 <body>
 <div class="app">
@@ -58,8 +59,8 @@
  <div class="top"><h1>مباشر</h1>
   <div class="seg"><button id="m-all" class="on" onclick="mode='all';draw()">الكل</button><button id="m-din" onclick="mode='din';draw()">داخل المطعم</button><button id="m-tk" onclick="mode='tk';draw()">سفري</button></div>
   <div class="sp"></div><input class="srch" id="sr" placeholder="🔍 ابحث عن طاولة أو طلب..." oninput="draw()">
-  <button class="btn ghost" onclick="seedDemo();draw()">بيانات تجريبية</button>
-  <button class="btn ghost" onclick="if(confirm('مسح كل البيانات؟')){resetAll();draw()}">مسح</button></div>
+  <button class="btn ghost demo-only" onclick="if(confirm('سيحذف الطلبات الحقيقية ويضع بيانات وهمية. متأكد؟')){seedDemo();draw()}">بيانات تجريبية</button>
+  <button class="btn ghost demo-only" onclick="if(confirm('مسح كل البيانات؟')){resetAll();draw()}">مسح</button></div>
  <div class="grid">
   <div class="col">
    <div class="card leg"><h3>نشاط الطاولات</h3><div id="act"></div></div>
@@ -96,21 +97,21 @@ function draw() {
   const s = load(), term = $('#sr').value.trim();
   ['all', 'din', 'tk'].forEach(k => $('#m-' + k).classList.toggle('on', mode === k));
   // table activity
-  const cnt = {}; for (let n = 1; n <= TABLES; n++) { const st = tableStatus(n, s); cnt[st] = (cnt[st] || 0) + 1; }
+  const cnt = {}; for (const n of tableList()) { const st = tableStatus(n, s); cnt[st] = (cnt[st] || 0) + 1; }
   $('#act').innerHTML = Object.keys(NL).map(k => `<div><span><i class="dot" style="background:${COL[k]}"></i>${NL[k]}</span><b>${cnt[k] || 0}</b></div>`).join('');
   // performance
   const done = s.orders.filter(o => o.tReady || o.tDone);
   const prep = done.filter(o => o.tStart && o.tReady).map(o => o.tReady - o.tStart);
   const avg = prep.length ? Math.round(prep.reduce((a, b) => a + b, 0) / prep.length / 60000) : 0;
   const hr = s.orders.filter(o => Date.now() - o.t < 3600e3).length;
-  $('#perf').innerHTML = `<div>متوسط وقت التحضير<b>${avg} د</b></div><div>طلبات / ساعة<b>${hr}</b></div><div>دوران الطاولات<b>${(s.orders.filter(o => o.status === 'served' && o.table).length / TABLES).toFixed(1)}x</b></div>`;
+  $('#perf').innerHTML = `<div>متوسط وقت التحضير<b>${avg} د</b></div><div>طلبات / ساعة<b>${hr}</b></div><div>دوران الطاولات<b>${(s.orders.filter(o => o.status === 'served' && o.table).length / Math.max(1, tableList().length)).toFixed(1)}x</b></div>`;
   // map
-  $('#map').innerHTML = Array.from({ length: TABLES }, (_, i) => {
-    const n = i + 1, st = tableStatus(n, s), o = oldest(s, n), p = POS[i];
+  $('#map').innerHTML = ZONES.filter(z => z.tables.length).map(z => `<div class="zn">${esc(z.name)}</div><div class="tg">${z.tables.slice().sort((x, y) => x - y).map(n => {
+    const st = tableStatus(n, s), o = oldest(s, n);
     const hide = term && !String(n).includes(term) ? 'opacity:.2;' : '';
     const sub = o ? `<small>${Math.floor((Date.now() - o.t) / 60000)}د</small>` : '';
-    return `<div class="t s-${st} ${n === 12 ? 'round' : ''}" style="${hide}right:${p[0]}%;top:${p[1]}%" onclick="openTable(${n})">${String(n).padStart(2, '0')}${sub}</div>`;
-  }).join('');
+    return `<div class="t s-${st}" style="${hide}" onclick="openTable(${n})">${String(n).padStart(2, '0')}${sub}</div>`;
+  }).join('')}</div>`).join('') || '<div style="color:var(--muted);padding:20px">لا توجد طاولات — أضفها من صفحة الإدارة</div>';
   // queue
   const filt = [['all', 'الكل'], ['din', 'داخل'], ['tk', 'سفري']];
   $('#qt').innerHTML = filt.map(([k, l]) => `<button class="${qf === k ? 'on' : ''}" onclick="qf='${k}';draw()">${l}</button>`).join('');
@@ -146,7 +147,7 @@ function openOrder(id) {
   const s = load(), o = s.orders.find(x => x.id === id); if (!o) return;
   const nx = { new: 'بدء التحضير', preparing: 'تحديد كجاهز', ready: 'تم التقديم' }[o.status];
   $('#mb').innerHTML = `<h3 style="margin-bottom:10px">طلب #${o.id} ${o.table ? '· طاولة ' + o.table : '· سفري'}</h3>
-   ${o.items.map(i => `<div class="row"><span>${i.qty}× ${i.name}</span><span>${money(i.price * i.qty)}</span></div>`).join('')}
+   ${o.items.map(i => `<div class="row"><span>${itemHtml(i)}</span><span>${money(i.price * i.qty)}</span></div>`).join('')}${o.note ? `<div class="row"><span style="color:#ffd27a">📝 ${esc(o.note)}</span></div>` : ''}
    ${o.waiter ? `<div class="row"><span>النادل</span><span>${o.waiter}</span></div>` : ''}${o.payReq && !o.paid ? `<div class="row"><span>طلب دفع</span><b style="color:#7cc4ff">${o.payReq === 'cash' ? 'كاش' : 'بطاقة'}</b></div>` : ''}<div class="row" style="border-top:1px solid var(--bd);margin-top:6px;padding-top:8px"><b>${STATUS[o.status]} · ${o.paid ? 'مدفوع' : 'غير مدفوع'}</b><b>${money(o.total)}</b></div>
    <div class="acts">${o.status === 'pending' ? `<button class="btn" onclick="acceptOrder(${o.id},'المدير');closeM()">قبول (كمدير)</button>` : ''}${nx ? `<button class="btn" onclick="advance(${o.id});closeM()">${nx}</button>` : ''}${!o.paid ? `<button class="btn ghost" onclick="markPaid(${o.id});closeM()">تحصيل الدفع</button>` : ''}<button class="btn ghost" onclick="closeM()">إغلاق</button></div>`;
   $('#md').classList.add('on');

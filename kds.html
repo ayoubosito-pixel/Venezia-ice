@@ -41,7 +41,7 @@ function card(o, kind) {
   const its = o.items.filter(i => st === 'all' || i.st === st);
   const act = { new: 'اضغط لبدء التحضير', preparing: 'اضغط عند الانتهاء', ready: 'جاهز — بانتظار النادل ' + (o.waiter || '') }[o.status];
   return `<div class="k ${cls}" ${o.status === 'ready' ? '' : `onclick="advance(${o.id});draw()"`}><div class="h"><span>${o.table ? 'طاولة ' + o.table : 'سفري'} · #${o.id}</span><span>${kind === 'ready' ? '✓' : mmss(Date.now() - o.t)}</span></div>
-  <div class="b"><div style="font-size:12px;opacity:.65">النادل: ${o.waiter || '—'}</div>${its.map(i => `${i.qty}× ${i.name}`).join('<br>')}</div><div class="f">${min >= 15 && kind !== 'ready' ? '⚠ متأخر — ' : ''}${act}</div></div>`;
+  <div class="b"><div style="font-size:12px;opacity:.65">النادل: ${o.waiter || '—'}</div>${its.map(i => itemHtml(i)).join('<br>')}${o.note ? `<div style="margin-top:6px;color:#ffd27a;font-weight:700">📝 ${esc(o.note)}</div>` : ''}</div><div class="f">${min >= 15 && kind !== 'ready' ? '⚠ متأخر — ' : ''}${act}</div></div>`;
 }
 function draw() {
   const s = load();
