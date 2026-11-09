@@ -38,7 +38,7 @@ const DEFAULT_CFG = {
   ],
 };
 /* live containers: filled from the config, mutated in place so every page sees updates */
-const CATS = {}, MENU = [], ZONES = [];
+const CATS = {}, MENU = [], ZONES = [], BRAND = { name: '', logo: '' };
 function tableList() { return ZONES.reduce((a, z) => a.concat(z.tables), []).sort((x, y) => x - y); }
 function zoneObj(n) { return ZONES.find(z => z.tables.includes(n)) || TK_ZONE; }
 function zoneOf(n) { return zoneObj(n).name; }
@@ -63,7 +63,7 @@ let _cfg = null, _cref = null, _cfgReady = false;
 function cfgReady() { return _cfgReady; }
 function normCfg(c) {
   if (!c || !c.v) { if (!c || !c.menu) c = clone(DEFAULT_CFG); }
-  c.cats = c.cats || {}; c.menu = c.menu || []; c.zones = c.zones || []; c.waiters = c.waiters || []; c.pin = c.pin || '1234';
+  c.cats = c.cats || {}; c.menu = c.menu || []; c.zones = c.zones || []; c.waiters = c.waiters || []; c.brand = c.brand || {}; c.pin = c.pin || '1234';
   c.zones.forEach(z => { z.tables = z.tables || []; });
   c.menu.forEach(m => { m.opts = m.opts || []; });
   return c;
@@ -73,6 +73,7 @@ function applyCfg(c) {
   Object.keys(CATS).forEach(k => delete CATS[k]); Object.assign(CATS, c.cats);
   MENU.length = 0; c.menu.forEach(m => MENU.push(m));
   ZONES.length = 0; c.zones.forEach(z => ZONES.push(z)); ZONES.push(TK_ZONE);
+  BRAND.name = (c.brand && c.brand.name) || ''; BRAND.logo = (c.brand && c.brand.logo) || '';
 }
 applyCfg(normCfg((() => { try { return JSON.parse(localStorage.getItem(CKEY)); } catch (e) { return null; } })()));
 /* waiter / admin passwords are stored only as SHA-256 hashes (salted with the account id) */
@@ -109,7 +110,19 @@ let _ref = null, _synced = false, _listeners = [];
 function load() { return _state; }
 function cloudOn() { return !!_ref; }
 function synced() { return _synced; }
-function notify() { _listeners.slice().forEach(cb => { try { cb(); } catch (e) { console.error(e); } }); }
+/* venue identity: any element with data-brand-name / data-brand-logo is filled from the config */
+function applyBrand() {
+  if (typeof document === 'undefined') return;
+  document.querySelectorAll('[data-brand-name]').forEach(e => { e.textContent = BRAND.name || 'طاولات سمارت'; });
+  document.querySelectorAll('[data-brand-logo]').forEach(e => { if (BRAND.logo) { if (e.getAttribute('src') !== BRAND.logo) e.src = BRAND.logo; e.hidden = false; } else e.hidden = true; });
+  if (!document.__t0) document.__t0 = document.title;
+  document.title = BRAND.name ? BRAND.name + ' — ' + document.__t0 : document.__t0;
+}
+if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', () => applyBrand());
+function brandCardHtml() {
+  return '<div style="display:flex;justify-content:center;align-items:center;gap:6px;margin-bottom:6px">' + (BRAND.logo ? '<img src="' + BRAND.logo + '" style="width:28px;height:28px;border-radius:7px;object-fit:cover">' : '') + '<b style="font-size:13px">' + esc(BRAND.name || 'طاولات سمارت') + '</b></div>';
+}
+function notify() { try { applyBrand(); } catch (e) {} _listeners.slice().forEach(cb => { try { cb(); } catch (e) { console.error(e); } }); }
 function cache() { try { localStorage.setItem(KEY, JSON.stringify(_state)); } catch (e) {} }
 
 (function init() {

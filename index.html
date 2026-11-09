@@ -18,7 +18,7 @@ h1{font-size:28px;margin-bottom:6px}p.s{color:var(--muted);margin-bottom:20px}
 .qc h4{margin-bottom:8px}.qc .q{display:grid;place-items:center}.qc small{display:block;font-size:10px;color:#666;margin-top:6px}
 @media print{.noprint{display:none}body{background:#fff}.w{padding:0}.qc{break-inside:avoid;border:1px solid #ccc}}
 </style></head><body><div class="w">
-<div class="noprint"><h1>🍽 طاولات سمارت</h1><p class="s">اطلب بمسح الكود الموجود على الطاولة — بدون تطبيق وبدون انتظار.</p>
+<div class="noprint"><h1 class="brand"><img data-brand-logo hidden alt=""><span data-brand-name>طاولات سمارت</span></h1><p class="s">اطلب بمسح الكود الموجود على الطاولة — بدون تطبيق وبدون انتظار.</p>
 <div class="links">
  <a href="menu.html?table=1"><span>📱 العميل</span><b>قائمة الطلب</b><span>تجربة ما بعد مسح الـ QR</span></a>
  <a href="dashboard.html"><span>▦ الإدارة</span><b>اللوحة المباشرة</b><span>خريطة الصالة وطابور الطلبات</span></a>
@@ -43,12 +43,12 @@ function gen() {
   for (const i of tableList()) {
     const url = b + 'menu.html?table=' + i;
     const d = document.createElement('div'); d.className = 'qc';
-    d.innerHTML = `<h4>طاولة ${i}</h4><div class="q"></div><small>امسح للطلب</small>`;
+    d.innerHTML = brandCardHtml() + `<h4>طاولة ${i}</h4><div class="q"></div><small>امسح للطلب</small>`;
     box.appendChild(d);
     try { new QRCode(d.querySelector('.q'), { text: url, width: 130, height: 130 }); } catch (e) { d.querySelector('.q').textContent = url; }
   }
 }
 gen();
-let _sig = JSON.stringify(tableList());
-_listeners.push(() => { const s = JSON.stringify(tableList()); if (s !== _sig) { _sig = s; gen(); } });
+let _sig = JSON.stringify([tableList(), BRAND]);
+_listeners.push(() => { const s = JSON.stringify([tableList(), BRAND]); if (s !== _sig) { _sig = s; gen(); } });
 </script></body></html>

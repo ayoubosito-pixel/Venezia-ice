@@ -47,13 +47,13 @@ h3.sec{font-size:13px;color:var(--muted);margin:18px 0 8px;font-weight:600}
 </style></head><body>
 
 <div id="gate" class="gate" hidden>
- <h1>⚙️ إدارة المطعم</h1><p>أدخل رمز الإدارة للمتابعة. الرمز الافتراضي <b>1234</b> — غيّره من تبويب «الإعدادات» بعد الدخول.</p>
+ <div style="text-align:center;margin-bottom:6px"><span class="brand"><img data-brand-logo hidden alt=""><b data-brand-name></b></span></div><h1>⚙️ إدارة المطعم</h1><p>أدخل رمز الإدارة للمتابعة. الرمز الافتراضي <b>1234</b> — غيّره من تبويب «الإعدادات» بعد الدخول.</p>
  <input id="pin" class="inp" type="password" inputmode="numeric" placeholder="رمز الإدارة" onkeydown="if(event.key==='Enter')unlock()">
  <button class="btn" style="padding:13px" onclick="unlock()">دخول</button>
 </div>
 
 <div id="app" class="w" hidden>
- <div class="hd noprint"><h1>⚙️ إدارة المطعم</h1><div><a href="index.html">← الرئيسية</a> · <a href="#" onclick="lock();return false">خروج</a></div></div>
+ <div class="hd noprint"><h1>⚙️ إدارة <span class="brand"><img data-brand-logo hidden alt=""><b data-brand-name></b></span></h1><div><a href="index.html">← الرئيسية</a> · <a href="#" onclick="lock();return false">خروج</a></div></div>
  <div class="tabs noprint" id="tabs"></div>
  <div id="main"></div>
 </div>
@@ -115,9 +115,9 @@ function render(force) {
   const sig = JSON.stringify([tab, _cfg, showQR, base]);
   if (!force && sig === _sig) return;
   _sig = sig;
-  $('#tabs').innerHTML = [['products', '🍽 المنتجات'], ['cats', '🗂 الفئات'], ['tables', '🪑 الصالات والطاولات'], ['waiters', '👥 النوادل'], ['settings', '🔐 الإعدادات']]
+  $('#tabs').innerHTML = [['products', '🍽 المنتجات'], ['cats', '🗂 الفئات'], ['tables', '🪑 الصالات والطاولات'], ['brand', '🏷 الهوية'], ['waiters', '👥 النوادل'], ['settings', '🔐 الإعدادات']]
     .map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" onclick="tab='${k}';render(true)">${l}</button>`).join('');
-  $('#main').innerHTML = { products: vProducts, cats: vCats, tables: vTables, waiters: vWaiters, settings: vSettings }[tab]();
+  $('#main').innerHTML = { products: vProducts, cats: vCats, tables: vTables, waiters: vWaiters, brand: vBrand, settings: vSettings }[tab]();
   if (tab === 'tables' && showQR) drawQR();
 }
 _listeners.push(() => render());
@@ -204,7 +204,7 @@ function drawQR() {
   const box = $('#qrs'); box.innerHTML = '';
   const add = (title, zone, url) => {
     const d = document.createElement('div'); d.className = 'qc';
-    d.innerHTML = `<small>${esc(zone)}</small><h4>${esc(title)}</h4><div class="q"></div><small>امسح للطلب</small>`;
+    d.innerHTML = brandCardHtml() + `<small>${esc(zone)}</small><h4>${esc(title)}</h4><div class="q"></div><small>امسح للطلب</small>`;
     box.appendChild(d);
     try { new QRCode(d.querySelector('.q'), { text: url, width: 130, height: 130 }); } catch (e) { d.querySelector('.q').textContent = url; }
   };
@@ -267,6 +267,33 @@ async function resetPw(id) {
 }
 function toggleWaiter(id) { cfgMutate(c => { const q = c.waiters.find(x => x.id === id); if (!q) return false; q.off = !q.off; return true; }, null, fail); }
 function delWaiter(id) { const w = (_cfg.waiters || []).find(x => x.id === id); if (w && confirm('حذف حساب ' + w.name + '؟')) cfgMutate(c => { c.waiters = c.waiters.filter(x => x.id !== id); return true; }, null, fail); }
+
+/* ---------- brand: venue name + logo ---------- */
+let bName = null, bLogo = null;
+function vBrand() {
+  if (bName === null) { bName = BRAND.name; bLogo = BRAND.logo; }
+  return `<div class="warn">اسم المقهى أو المطعم وشعاره يظهران في صفحة الزبون والنادل والمطبخ واللوحة والتقارير وعلى بطاقات الباركود المطبوعة.</div>
+  <div class="zc"><label>اسم المقهى / المطعم</label><input class="inp" maxlength="40" value="${esc(bName)}" oninput="bName=this.value" placeholder="مثال: مقهى فينيسيا">
+  <label>الشعار</label><div style="display:flex;gap:12px;align-items:center"><div class="prev" id="b_prev">${bLogo ? `<img src="${bLogo}" alt="">` : '🏷'}</div>
+  <div style="display:flex;flex-direction:column;gap:8px"><input id="b_file" type="file" accept="image/*" style="display:none" onchange="pickLogo(this)"><button class="btn ghost" onclick="$('#b_file').click()">📷 اختر الشعار</button><button class="btn ghost" onclick="bLogo='';$('#b_prev').textContent='🏷'">إزالة الشعار</button></div></div>
+  <button class="btn" style="margin-top:14px;width:100%;padding:13px" onclick="saveBrand()">حفظ الهوية</button></div>`;
+}
+function pickLogo(inp) {
+  const f = inp.files[0]; if (!f) return;
+  const fr = new FileReader();
+  fr.onload = () => { const im = new Image(); im.onload = () => {
+    const sc = Math.min(1, 256 / Math.max(im.width, im.height)), w = Math.round(im.width * sc), h = Math.round(im.height * sc);
+    const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(im, 0, 0, w, h);
+    let d = c.toDataURL('image/png');
+    if (d.length > 120000) { const c2 = document.createElement('canvas'); c2.width = w; c2.height = h; const x = c2.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.drawImage(im, 0, 0, w, h); d = c2.toDataURL('image/jpeg', 0.8); }
+    bLogo = d; $('#b_prev').innerHTML = `<img src="${d}" alt="">`;
+  }; im.onerror = () => toast('تعذر قراءة الصورة'); im.src = fr.result; };
+  fr.readAsDataURL(f);
+}
+function saveBrand() {
+  const b = { name: (bName || '').trim(), logo: bLogo || '' };
+  cfgMutate(c => { c.brand = b; return true; }, () => { toast('تم حفظ الهوية ✓'); bName = null; render(true); }, fail);
+}
 
 /* ---------- settings ---------- */
 function vSettings() {

@@ -23,7 +23,7 @@
 .empty{color:var(--muted);text-align:center;padding:40px 0;font-size:13px}
 </style></head><body>
 <div id="gate" class="gate" hidden><h2>🔔 تفعيل تنبيهات المطبخ</h2><p>المس الزر ليرنّ المطبخ وينطق اسم النادل ورقم الفاتورة عند وصول كل طلب.</p><button class="btn" style="padding:16px 28px;font-size:17px" onclick="unlockAudio();beep(1);say('الصوت مفعّل');gate()">تفعيل الصوت الآن</button></div>
-<div class="hd"><a href="dashboard.html" style="font-size:20px">←</a><h1>KDS — شاشة المطبخ</h1>
+<div class="hd"><a href="dashboard.html" style="font-size:20px">←</a><span class="brand"><img data-brand-logo hidden alt=""><b data-brand-name></b></span><h1>KDS — شاشة المطبخ</h1>
  <div class="flt" id="fl"></div><div class="sp"></div><button class="btn" id="snd" onclick="unlockAudio();beep(1);this.textContent='🔔 الصوت مفعّل'">🔔 تفعيل الصوت</button><span id="clk" style="color:var(--muted)"></span></div>
 <div class="cols">
  <div class="col"><h2>قيد الانتظار <span id="c1">0</span></h2><div id="p1"></div></div>

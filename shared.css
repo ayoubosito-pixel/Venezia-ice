@@ -19,3 +19,5 @@ button{cursor:pointer;border:0}
 .app{display:flex;min-height:100vh}
 .main{flex:1;padding:18px;min-width:0}
 @media(max-width:760px){.app{flex-direction:column}.side{width:100%;height:auto;flex-direction:row;justify-content:center;position:static;border-left:0;border-bottom:1px solid var(--bd)}}
+
+.brand{display:inline-flex;align-items:center;gap:8px}.brand img{width:34px;height:34px;border-radius:9px;object-fit:cover;background:#fff}

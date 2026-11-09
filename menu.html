@@ -130,7 +130,7 @@ function nav() {
 function vMenu() {
   if (cat !== 'all' && !CATS[cat]) cat = 'all';
   const list = MENU.filter(m => !m.hidden && (cat === 'all' || m.cat === cat) && m.name.includes(term));
-  return `<header><div class="ic">☰</div><span>${table ? 'طاولة ' + table : 'طلب سفري'}</span><div class="ic" onclick="go('cart')">🛒</div></header>
+  return `<div style="display:flex;justify-content:center;padding-top:14px"><span class="brand"><img data-brand-logo hidden alt=""><b data-brand-name></b></span></div><header><div class="ic">☰</div><span>${table ? 'طاولة ' + table : 'طلب سفري'}</span><div class="ic" onclick="go('cart')">🛒</div></header>
   <span class="online">${cloudOn() ? '● متصل' : '● وضع محلي'}</span>
   <input class="search" placeholder="🔍 ابحث عن منتج..." value="${esc(term)}" oninput="term=this.value;render(true)">
   <div class="chips">${['all', ...Object.keys(CATS)].map(c => `<div class="chip ${cat === c ? 'on' : ''}" onclick="cat='${c}';render()">${c === 'all' ? 'الكل' : esc(CATS[c])}</div>`).join('')}</div>
@@ -203,6 +203,7 @@ function vChat() {
 }
 function newOrder() { go('menu'); }
 function render(keepFocus) {
+  setTimeout(applyBrand, 0);
   const a = $('#app'); const f = document.activeElement && document.activeElement.className === 'search';
   const cm = $('#cmsg'), cmv = cm ? cm.value : '', cmf = cm && document.activeElement === cm;
   a.innerHTML = { menu: vMenu, cart: vCart, track: vTrack, chat: vChat }[view]();

@@ -37,7 +37,7 @@ h2 span{background:var(--acc);color:#111;border-radius:99px;padding:0 9px;font-s
 </style></head><body>
 <div class="wrap">
  <div id="login" class="login" hidden>
-  <h1>🧑‍🍳 تطبيق النادل</h1><p>اختر اسمك وأدخل كلمة المرور التي أعطاك إياها المدير.</p>
+  <div><span class="brand"><img data-brand-logo hidden alt=""><b data-brand-name></b></span></div><h1>🧑‍🍳 تطبيق النادل</h1><p>اختر اسمك وأدخل كلمة المرور التي أعطاك إياها المدير.</p>
   <select class="inp" id="wsel"></select>
   <input class="inp" id="wpw" type="password" autocomplete="current-password" placeholder="كلمة المرور" onkeydown="if(event.key==='Enter')login()">
   <div id="lhint" style="color:var(--muted);font-size:13px;min-height:18px"></div>
@@ -45,6 +45,7 @@ h2 span{background:var(--acc);color:#111;border-radius:99px;padding:0 9px;font-s
  </div>
  <div id="gate" class="gate" hidden><h2>🔔 تفعيل التنبيهات</h2><p>المتصفح يمنع الصوت حتى تلمس الشاشة. المس الزر ليرنّ الهاتف عند وصول كل طلب.</p><button class="btn big" style="max-width:320px" onclick="activate()">تفعيل الصوت الآن</button></div>
  <div id="app" hidden>
+  <div style="margin-bottom:8px"><span class="brand"><img data-brand-logo hidden alt=""><b data-brand-name></b></span></div>
   <div class="top"><div><b id="who"></b><small id="zl"></small></div><div style="display:flex;gap:6px"><select class="inp" id="zsel" style="width:auto;padding:8px" onchange="chZone()"></select><button class="btn ghost" onclick="logout()">خروج</button></div></div>
   <div class="tools"><button class="btn ghost" onclick="testSound()">🔊 اختبار الصوت</button><span id="vs" class="pill" style="align-self:center"></span></div>
   <h2>طلبات جديدة بانتظار نادل <span id="n1">0</span></h2><div id="l1"></div>

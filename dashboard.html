@@ -56,7 +56,7 @@
 <div class="app">
 <nav class="side"><a href="index.html" title="الرئيسية">☰</a><a class="on" href="dashboard.html" title="مباشر">▦</a><a href="kds.html" title="المطبخ">👨‍🍳</a><a href="reports.html" title="التقارير">📊</a><a href="menu.html?table=1" title="قائمة العميل">📱</a></nav>
 <div class="main">
- <div class="top"><h1>مباشر</h1>
+ <div class="top"><span class="brand"><img data-brand-logo hidden alt=""><b data-brand-name></b></span><h1>مباشر</h1>
   <div class="seg"><button id="m-all" class="on" onclick="mode='all';draw()">الكل</button><button id="m-din" onclick="mode='din';draw()">داخل المطعم</button><button id="m-tk" onclick="mode='tk';draw()">سفري</button></div>
   <div class="sp"></div><input class="srch" id="sr" placeholder="🔍 ابحث عن طاولة أو طلب..." oninput="draw()">
   <button class="btn ghost demo-only" onclick="if(confirm('سيحذف الطلبات الحقيقية ويضع بيانات وهمية. متأكد؟')){seedDemo();draw()}">بيانات تجريبية</button>
