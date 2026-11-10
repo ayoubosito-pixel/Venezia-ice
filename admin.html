@@ -139,6 +139,7 @@ function editProd(id) {
   if (!Object.keys(CATS).length) return toast('أضف فئة أولًا من تبويب «الفئات»');
   $('#mb').innerHTML = `<h2 style="margin-bottom:6px">${m ? 'تعديل منتج' : 'إضافة منتج'}</h2>
   <label>اسم المنتج</label><input id="f_name" class="inp" maxlength="60" value="${esc(ed.name)}" placeholder="مثال: موكا">
+  <label>ترجمة الاسم للزبائن (اختياري)</label><div class="two">${['en', 'es', 'fr'].map(l => `<input id="f_tr_${l}" class="inp" dir="ltr" maxlength="60" placeholder="${{ en: 'English', es: 'Español', fr: 'Français' }[l]}" value="${esc((ed.tr || {})[l] || '')}">`).join('')}</div>
   <div class="two"><div><label>السعر ($)</label><input id="f_price" class="inp" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(ed.price)}"></div>
   <div><label>الفئة</label><select id="f_cat" class="inp">${Object.keys(CATS).map(k => `<option value="${k}" ${ed.cat === k ? 'selected' : ''}>${esc(CATS[k])}</option>`).join('')}</select></div></div>
   <div class="two"><div><label>يُحضَّر في</label><select id="f_st" class="inp">${Object.keys(STATIONS).map(k => `<option value="${k}" ${ed.st === k ? 'selected' : ''}>${STATIONS[k]}</option>`).join('')}</select></div>
@@ -159,7 +160,8 @@ function saveProd() {
   if (!name) return toast('اكتب اسم المنتج');
   if (!(price >= 0)) return toast('اكتب السعر');
   const p = { name, price: Math.round(price * 100) / 100, cat: $('#f_cat').value, st: $('#f_st').value, emoji: $('#f_emoji').value.trim() || '🍽', img: ed.img || '',
-    opts: [...document.querySelectorAll('.chk input:checked')].map(i => i.value), hidden: $('#f_hidden').checked };
+    opts: [...document.querySelectorAll('.chk input:checked')].map(i => i.value), hidden: $('#f_hidden').checked, tr: {} };
+  ['en', 'es', 'fr'].forEach(l => { const v = $('#f_tr_' + l).value.trim(); if (v) p.tr[l] = v; });
   const id = ed.id;
   cfgMutate(c => {
     if (id) { const i = c.menu.findIndex(x => x.id === id); if (i < 0) return false; c.menu[i] = { ...c.menu[i], ...p }; }
@@ -174,7 +176,18 @@ function vCats() {
   ${Object.keys(CATS).map(k => `<div class="p"><div class="pm"><b>${esc(CATS[k])}</b><small>${MENU.filter(m => m.cat === k).length} منتج</small></div><div class="ac"><button onclick="renCat('${k}')">✏️</button><button onclick="delCat('${k}')">🗑</button></div></div>`).join('') || '<div class="empty">لا توجد فئات</div>'}`;
 }
 function addCat() { const n = ncName.trim(); if (!n) return toast('اكتب اسم الفئة'); ncName = ''; cfgMutate(c => { c.cats['c' + Date.now().toString(36)] = n; return true; }, () => { toast('تمت الإضافة'); render(true); }, fail); }
-function renCat(k) { const n = prompt('الاسم الجديد للفئة', CATS[k]); if (n && n.trim()) cfgMutate(c => { c.cats[k] = n.trim(); return true; }, null, fail); }
+function renCat(k) {
+  ed = null; const tr = CATTR[k] || {};
+  $('#mb').innerHTML = `<h2 style="margin-bottom:6px">تعديل الفئة</h2><label>الاسم (عربي)</label><input id="c_ar" class="inp" maxlength="40" value="${esc(CATS[k])}">
+  <label>الترجمة للزبائن (اختياري)</label><div class="two">${['en', 'es', 'fr'].map(l => `<input id="c_${l}" class="inp" dir="ltr" maxlength="40" placeholder="${{ en: 'English', es: 'Español', fr: 'Français' }[l]}" value="${esc(tr[l] || '')}">`).join('')}</div>
+  <div class="bar" style="margin-top:16px"><button class="btn" style="flex:1;padding:13px" onclick="saveCat('${k}')">حفظ</button><button class="btn ghost" onclick="closeMod()">إلغاء</button></div>`;
+  $('#mod').classList.add('on');
+}
+function saveCat(k) {
+  const n = $('#c_ar').value.trim(); if (!n) return toast('اكتب اسم الفئة');
+  const tr = {}; ['en', 'es', 'fr'].forEach(l => { const v = $('#c_' + l).value.trim(); if (v) tr[l] = v; });
+  cfgMutate(c => { c.cats[k] = n; c.catTr = c.catTr || {}; if (Object.keys(tr).length) c.catTr[k] = tr; else delete c.catTr[k]; return true; }, () => { toast('تم الحفظ ✓'); closeMod(); render(true); }, fail);
+}
 function delCat(k) {
   if (MENU.some(m => m.cat === k)) return toast('انقل منتجات هذه الفئة أو احذفها أولًا');
   if (confirm('حذف الفئة «' + CATS[k] + '»؟')) cfgMutate(c => { delete c.cats[k]; return true; }, null, fail);

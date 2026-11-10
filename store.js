@@ -38,7 +38,7 @@ const DEFAULT_CFG = {
   ],
 };
 /* live containers: filled from the config, mutated in place so every page sees updates */
-const CATS = {}, MENU = [], ZONES = [], BRAND = { name: '', logo: '', color: '#111827' };
+const CATS = {}, CATTR = {}, MENU = [], ZONES = [], BRAND = { name: '', logo: '', color: '#111827' };
 function tableList() { return ZONES.reduce((a, z) => a.concat(z.tables), []).sort((x, y) => x - y); }
 function zoneObj(n) { return ZONES.find(z => z.tables.includes(n)) || TK_ZONE; }
 function zoneOf(n) { return zoneObj(n).name; }
@@ -63,7 +63,7 @@ let _cfg = null, _cref = null, _cfgReady = false;
 function cfgReady() { return _cfgReady; }
 function normCfg(c) {
   if (!c || !c.v) { if (!c || !c.menu) c = clone(DEFAULT_CFG); }
-  c.cats = c.cats || {}; c.menu = c.menu || []; c.zones = c.zones || []; c.waiters = c.waiters || []; c.brand = c.brand || {}; c.pin = c.pin || '1234';
+  c.cats = c.cats || {}; c.menu = c.menu || []; c.zones = c.zones || []; c.waiters = c.waiters || []; c.brand = c.brand || {}; c.catTr = c.catTr || {}; c.pin = c.pin || '1234';
   c.zones.forEach(z => { z.tables = z.tables || []; });
   c.menu.forEach(m => { m.opts = m.opts || []; });
   return c;
@@ -71,6 +71,7 @@ function normCfg(c) {
 function applyCfg(c) {
   _cfg = c;
   Object.keys(CATS).forEach(k => delete CATS[k]); Object.assign(CATS, c.cats);
+  Object.keys(CATTR).forEach(k => delete CATTR[k]); Object.assign(CATTR, c.catTr || {});
   MENU.length = 0; c.menu.forEach(m => MENU.push(m));
   ZONES.length = 0; c.zones.forEach(z => ZONES.push(z)); ZONES.push(TK_ZONE);
   BRAND.name = (c.brand && c.brand.name) || ''; BRAND.logo = (c.brand && c.brand.logo) || '';
@@ -402,19 +403,19 @@ function beep(n) {
     }
   } catch (e) {}
 }
-function say(text) {
+function say(text, lang) {
   try {
     if (!window.speechSynthesis) return;
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ar-SA'; u.rate = 0.95; u.volume = 1;
+    u.lang = lang || 'ar-SA'; u.rate = 0.95; u.volume = 1;
     speechSynthesis.cancel();
-    const v = speechSynthesis.getVoices().find(x => x.lang && x.lang.startsWith('ar'));
+    const pf = (lang || 'ar-SA').slice(0, 2), v = speechSynthesis.getVoices().find(x => x.lang && x.lang.toLowerCase().startsWith(pf));
     if (v) u.voice = v;
     speechSynthesis.speak(u);
   } catch (e) {}
 }
-function alertUser(text) {
+function alertUser(text, lang) {
   beep(2);
-  setTimeout(() => say(text), 750);
+  setTimeout(() => say(text, lang), 750);
   try { navigator.vibrate && navigator.vibrate([250, 120, 250]); } catch (e) {}
 }
