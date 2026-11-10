@@ -38,7 +38,7 @@ const DEFAULT_CFG = {
   ],
 };
 /* live containers: filled from the config, mutated in place so every page sees updates */
-const CATS = {}, MENU = [], ZONES = [], BRAND = { name: '', logo: '' };
+const CATS = {}, MENU = [], ZONES = [], BRAND = { name: '', logo: '', color: '#111827' };
 function tableList() { return ZONES.reduce((a, z) => a.concat(z.tables), []).sort((x, y) => x - y); }
 function zoneObj(n) { return ZONES.find(z => z.tables.includes(n)) || TK_ZONE; }
 function zoneOf(n) { return zoneObj(n).name; }
@@ -74,6 +74,7 @@ function applyCfg(c) {
   MENU.length = 0; c.menu.forEach(m => MENU.push(m));
   ZONES.length = 0; c.zones.forEach(z => ZONES.push(z)); ZONES.push(TK_ZONE);
   BRAND.name = (c.brand && c.brand.name) || ''; BRAND.logo = (c.brand && c.brand.logo) || '';
+  BRAND.color = (c.brand && /^#[0-9a-f]{6}$/i.test(c.brand.color)) ? c.brand.color : '#111827';
 }
 applyCfg(normCfg((() => { try { return JSON.parse(localStorage.getItem(CKEY)); } catch (e) { return null; } })()));
 /* waiter / admin passwords are stored only as SHA-256 hashes (salted with the account id) */
@@ -121,6 +122,18 @@ function applyBrand() {
 if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', () => applyBrand());
 function brandCardHtml() {
   return '<div style="display:flex;justify-content:center;align-items:center;gap:6px;margin-bottom:6px">' + (BRAND.logo ? '<img src="' + BRAND.logo + '" style="width:28px;height:28px;border-radius:7px;object-fit:cover">' : '') + '<b style="font-size:13px">' + esc(BRAND.name || 'طاولات سمارت') + '</b></div>';
+}
+/* printable table card: brand-coloured header, framed QR, big table number, 3 steps */
+function brandInk(hex) { const n = parseInt(String(hex).slice(1), 16) || 0, r = n >> 16, g = (n >> 8) & 255, b = n & 255; return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#111827' : '#ffffff'; }
+function qrCardHtml(o) {
+  const B = o.brand || BRAND, col = /^#[0-9a-f]{6}$/i.test(B.color) ? B.color : '#111827';
+  let svg = ''; try { svg = window.smtQR(o.url, { level: 'M', color: '#111' }); } catch (e) { svg = '<div class="qerr">' + esc(o.url) + '</div>'; }
+  return '<div class="qcard" style="--bc:' + col + ';--bi:' + brandInk(col) + '">' +
+    '<div class="qhead"><div class="qlogo">' + (B.logo ? '<img src="' + B.logo + '" alt="">' : '☕') + '</div><b>' + esc(B.name || 'طاولات سمارت') + '</b></div>' +
+    '<div class="qbody"><div class="qgo">امسح واطلب من هاتفك</div><div class="qframe">' + svg + '</div>' +
+    '<div class="qnum">' + (o.label ? '<small>' + esc(o.label) + '</small>' : '') + '<span>' + esc(o.num) + '</span></div>' +
+    '<div class="qzone">' + esc(o.zone || '') + '</div></div>' +
+    '<div class="qsteps"><span><i>1</i>امسح الكود</span><span><i>2</i>اختر طلبك</span><span><i>3</i>يصلك النادل</span></div></div>';
 }
 function notify() { try { applyBrand(); } catch (e) {} _listeners.slice().forEach(cb => { try { cb(); } catch (e) { console.error(e); } }); }
 function cache() { try { localStorage.setItem(KEY, JSON.stringify(_state)); } catch (e) {} }

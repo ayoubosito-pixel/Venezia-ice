@@ -21,3 +21,27 @@ button{cursor:pointer;border:0}
 @media(max-width:760px){.app{flex-direction:column}.side{width:100%;height:auto;flex-direction:row;justify-content:center;position:static;border-left:0;border-bottom:1px solid var(--bd)}}
 
 .brand{display:inline-flex;align-items:center;gap:8px}.brand img{width:34px;height:34px;border-radius:9px;object-fit:cover;background:#fff}
+
+/* ---- printable QR table cards ---- */
+.qrs{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:18px;justify-items:center}
+.qcard{width:100%;max-width:300px;background:#fff;color:#111827;border-radius:22px;overflow:hidden;box-shadow:0 6px 22px rgba(0,0,0,.28);text-align:center;font-family:inherit;break-inside:avoid;page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.qhead{background:var(--bc);color:var(--bi);padding:16px 14px 46px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.qhead b{font-size:19px;line-height:1.25;letter-spacing:.2px}
+.qlogo{width:62px;height:62px;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:30px;overflow:hidden;border:3px solid rgba(255,255,255,.9);box-shadow:0 2px 8px rgba(0,0,0,.2)}
+.qlogo img{width:100%;height:100%;object-fit:cover;background:#fff}
+.qbody{padding:0 18px 12px;margin-top:-34px}
+.qgo{display:inline-block;background:#fff;color:#111827;font-weight:700;font-size:13px;padding:5px 14px;border-radius:99px;box-shadow:0 2px 8px rgba(0,0,0,.15);margin-bottom:10px;position:relative}
+.qframe{width:78%;margin:0 auto;padding:9px;background:#fff;border-radius:16px;border:2px solid var(--bc);box-shadow:0 3px 10px rgba(0,0,0,.12)}
+.qframe svg{display:block;width:100%;height:auto}
+.qerr{font-size:9px;word-break:break-all;color:#555}
+.qnum{margin:12px auto 0;display:inline-flex;align-items:center;gap:10px;background:var(--bc);color:var(--bi);padding:6px 22px;border-radius:14px}
+.qnum small{font-size:15px;opacity:.9}.qnum span{font-size:34px;font-weight:800;line-height:1.1}
+.qzone{margin-top:8px;font-size:13px;color:#6b7280;font-weight:600;min-height:18px}
+.qsteps{display:flex;justify-content:space-around;gap:4px;border-top:2px dashed #d1d5db;margin:0 14px;padding:11px 0 14px;font-size:11px;color:#374151}
+.qsteps span{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
+.qsteps i{font-style:normal;width:22px;height:22px;border-radius:50%;background:var(--bc);color:var(--bi);display:grid;place-items:center;font-weight:700;font-size:12px}
+@media print{
+ @page{size:A4;margin:10mm}
+ .qrs{grid-template-columns:repeat(2,88mm);gap:8mm;justify-content:center}
+ .qcard{max-width:none;width:88mm;box-shadow:none;border:1.5px dashed #9ca3af;border-radius:6mm}
+}

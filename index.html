@@ -3,7 +3,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>طاولات سمارت — الرئيسية</title>
 <link rel="stylesheet" href="shared.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="qr.js"></script>
 <style>
 :root{--bg:#121110;--card:#1b1917;--bd:#2c2926;--tx:#f1ece6;--acc:#ff6a1a}
 .w{max-width:1000px;margin:0 auto;padding:24px 16px}
@@ -13,10 +13,7 @@ h1{font-size:28px;margin-bottom:6px}p.s{color:var(--muted);margin-bottom:20px}
 .links a:hover{border-color:var(--acc)}.links b{display:block;font-size:17px;margin:6px 0 4px}.links span{font-size:12px;color:var(--muted)}
 .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .inp{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px;min-width:260px;direction:ltr;outline:none}
-.qrs{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
-.qc{background:#fff;color:#111;border-radius:14px;padding:14px;text-align:center}
-.qc h4{margin-bottom:8px}.qc .q{display:grid;place-items:center}.qc small{display:block;font-size:10px;color:#666;margin-top:6px}
-@media print{.noprint{display:none}body{background:#fff}.w{padding:0}.qc{break-inside:avoid;border:1px solid #ccc}}
+@media print{.noprint{display:none}body{background:#fff}.w{padding:0}}
 </style></head><body><div class="w">
 <div class="noprint"><h1 class="brand"><img data-brand-logo hidden alt=""><span data-brand-name>طاولات سمارت</span></h1><p class="s">اطلب بمسح الكود الموجود على الطاولة — بدون تطبيق وبدون انتظار.</p>
 <div class="links">
@@ -42,10 +39,7 @@ function gen() {
   const box = document.getElementById('qrs'); box.innerHTML = '';
   for (const i of tableList()) {
     const url = b + 'menu.html?table=' + i;
-    const d = document.createElement('div'); d.className = 'qc';
-    d.innerHTML = brandCardHtml() + `<h4>طاولة ${i}</h4><div class="q"></div><small>امسح للطلب</small>`;
-    box.appendChild(d);
-    try { new QRCode(d.querySelector('.q'), { text: url, width: 130, height: 130 }); } catch (e) { d.querySelector('.q').textContent = url; }
+        box.insertAdjacentHTML('beforeend', qrCardHtml({ label: 'طاولة', num: i, zone: zoneOf(i), url }));
   }
 }
 gen();
