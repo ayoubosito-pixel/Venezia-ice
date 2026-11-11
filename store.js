@@ -277,11 +277,11 @@ function tableWaiter(s, t) {
   return a ? a.waiter : null;
 }
 /* open channel between a table's customer and its waiter, lives until the table is paid */
-function sendChat(table, from, name, text, kind, done) {
+function sendChat(table, from, name, text, kind, done, lang) {
   mutate(s => {
     const k = chatKey(table);
     text = String(text || '').slice(0, 300);
-    s.chat[k] = (s.chat[k] || []).concat([{ t: Date.now(), from, name, text, kind: kind || 'msg' }]).slice(-40);
+    s.chat[k] = (s.chat[k] || []).concat([{ t: Date.now(), from, name, text, kind: kind || 'msg', lang: lang || '' }]).slice(-40);
     const z = zoneObj(table || null);
     s.events.push({ id: ++s.evSeq, t: Date.now(), type: 'chat', from, name, text, kind: kind || 'msg', table: table || null, zone: z.name, zoneId: z.id, waiter: from === 'c' ? tableWaiter(s, table) : name, order: null });
     s.events = s.events.slice(-60);
@@ -389,6 +389,7 @@ function unlockAudio() {
 /* any first touch on the page unlocks sound, so alerts work after a reload too */
 if (typeof document !== 'undefined') ['pointerdown', 'touchstart', 'click', 'keydown'].forEach(ev =>
   document.addEventListener(ev, () => { if (!_audioOk) unlockAudio(); }, { passive: true }));
+function voiceOkL(l) { try { const p = (l || 'ar').slice(0, 2); return !!window.speechSynthesis && speechSynthesis.getVoices().some(v => v.lang && v.lang.toLowerCase().startsWith(p)); } catch (e) { return false; } }
 function voiceOk() { try { return !!window.speechSynthesis && speechSynthesis.getVoices().some(v => v.lang && v.lang.toLowerCase().startsWith('ar')); } catch (e) { return false; } }
 function beep(n) {
   try {

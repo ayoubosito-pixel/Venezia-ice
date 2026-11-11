@@ -72,6 +72,7 @@ label{display:block;font-size:12px;color:#cfe;margin:12px 0 6px}
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="store.js"></script>
 <script src="i18n.js"></script>
+<script src="i18n-staff.js"></script>
 <script>
 const q = new URLSearchParams(location.search);
 const table = parseInt(q.get('table')) || null;
@@ -165,9 +166,9 @@ function sendOrder() {
   }, orderNote);
 }
 function reqPayT(m) { unlockAudio(); requestPayTable(table, m); toast(m === 'cash' ? t('t_cash') : t('t_card')); }
-function callWaiter() { unlockAudio(); sendChat(table, 'c', 'الزبون', '🙋 الزبون ينادي النادل', 'call', ok => toast(ok ? t('t_called') : t('t_sendfail'))); }
-function quick(t) { unlockAudio(); sendChat(table, 'c', 'الزبون', t, 'msg'); }
-function sendMsg() { const i = $('#cmsg'); const t = i.value.trim(); if (!t) return; i.value = ''; unlockAudio(); sendChat(table, 'c', 'الزبون', t, 'msg'); }
+function callWaiter() { unlockAudio(); sendChat(table, 'c', 'الزبون', '🙋 الزبون ينادي النادل', 'call', ok => toast(ok ? t('t_called') : t('t_sendfail')), LANG); }
+function quick(t) { unlockAudio(); sendChat(table, 'c', 'الزبون', t, 'msg', null, LANG); }
+function sendMsg() { const i = $('#cmsg'); const t = i.value.trim(); if (!t) return; i.value = ''; unlockAudio(); sendChat(table, 'c', 'الزبون', t, 'msg', null, LANG); }
 function vTrack() {
   if (!synced()) return `<div class="page"><div class="empty">${t('loading')}</div></div>${nav()}`;
   const s = load();
@@ -203,7 +204,7 @@ function vChat() {
   const m = chatMsgs();
   const wn = (() => { const s = load(); return tableWaiter(s, table); })();
   return `<div class="page"><div class="title">${t('chat_title')}${wn ? ' ' + esc(wn) : ''}</div>
-  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;min-height:120px">${m.length ? m.map(x => `<div style="align-self:${x.from === 'c' ? 'flex-start' : 'flex-end'};max-width:80%;background:${x.from === 'c' ? 'var(--acc)' : 'var(--card2)'};color:${x.from === 'c' ? '#04210f' : 'var(--tx)'};padding:9px 13px;border-radius:14px;font-size:14px">${x.from === 'w' ? '<small style="opacity:.7;display:block">' + esc(x.name) + '</small>' : ''}${esc(x.from === 'w' ? x.text : tr(x.text))}</div>`).join('') : '<div class="empty" style="padding:30px 0">' + t('chat_empty') + '</div>'}</div>
+  <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;min-height:120px">${m.length ? m.map(x => `<div style="align-self:${x.from === 'c' ? 'flex-start' : 'flex-end'};max-width:80%;background:${x.from === 'c' ? 'var(--acc)' : 'var(--card2)'};color:${x.from === 'c' ? '#04210f' : 'var(--tx)'};padding:9px 13px;border-radius:14px;font-size:14px">${x.from === 'w' ? '<small style="opacity:.7;display:block">' + esc(x.name) + '</small>' : ''}${esc(tr(x.text))}${x.from === 'w' && tr(x.text) === x.text ? ` <a style="font-size:11px;opacity:.8;color:inherit" target="_blank" rel="noopener" href="https://translate.google.com/?sl=auto&tl=${LANG}&op=translate&text=${encodeURIComponent(x.text)}">🌐</a>` : ''}</div>`).join('') : '<div class="empty" style="padding:30px 0">' + t('chat_empty') + '</div>'}</div>
   <div class="two" style="margin-bottom:8px"><button class="btn ghost" onclick="callWaiter()">${t('call')}</button><button class="btn ghost" onclick="quick('💧 أريد ماء')">${t('q_water')}</button><button class="btn ghost" onclick="quick('🧂 أحتاج أدوات إضافية')">${t('q_tools')}</button><button class="btn ghost" onclick="quick('⚠️ عندي ملاحظة على الطلب')">${t('q_note')}</button></div>
   <div style="display:flex;gap:8px"><input id="cmsg" class="inp" style="direction:inherit;text-align:start" placeholder="${esc(t('chat_ph'))}" onkeydown="if(event.key==='Enter')sendMsg()"><button class="btn" onclick="sendMsg()">${t('chat_send')}</button></div></div>${nav()}`;
 }
