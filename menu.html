@@ -60,7 +60,9 @@ label{display:block;font-size:12px;color:#e6d5b8;margin:12px 0 6px}
 .stp:not(:last-child)::before{content:'';position:absolute;inset-inline-start:11px;top:24px;bottom:0;width:2px;background:var(--bd)}
 .stp .c{width:24px;height:24px;border-radius:50%;background:var(--bd);display:grid;place-items:center;font-size:12px;z-index:1}
 .stp.on{color:var(--tx)}.stp.on .c{background:var(--acc);color:var(--ink)}
-.pic{overflow:hidden}.pic img{width:100%;height:100%;object-fit:cover}
+.pic{overflow:hidden;position:relative}.gb{position:absolute;bottom:6px;inset-inline-end:6px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:2px 8px;border-radius:99px}
+.gal{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;direction:ltr;border-radius:14px;margin-bottom:6px;scrollbar-width:none}.gal::-webkit-scrollbar{display:none}.gal img{flex:0 0 100%;width:100%;height:230px;object-fit:cover;scroll-snap-align:center}
+.gd{display:flex;justify-content:center;gap:6px;margin:4px 0 10px}.gd span{width:7px;height:7px;border-radius:50%;background:#6b5a46}.gd span.on{background:var(--acc)}.pic img{width:100%;height:100%;object-fit:cover}
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:30;display:flex;align-items:flex-end;justify-content:center}
 .sh{background:var(--card);border-top:1px solid var(--bd);border-radius:20px 20px 0 0;width:100%;max-width:440px;padding:18px 16px 22px;max-height:88vh;overflow:auto}
 .opts{display:flex;flex-wrap:wrap;gap:8px}.oc{background:var(--card2);border:1px solid var(--bd);padding:9px 14px;border-radius:99px;font-size:13px;color:var(--tx)}.oc.on{background:var(--acc);color:var(--ink);border-color:var(--acc);font-weight:700}
@@ -86,6 +88,7 @@ label{display:block;font-size:12px;color:#e6d5b8;margin:12px 0 6px}
 </style></head>
 <body>
 <div id="app"></div>
+<div style="position:fixed;top:2px;left:4px;z-index:9;font:9px/1 monospace;color:#d9a441;opacity:.55;pointer-events:none">v6-gold</div>
 <div id="intro" hidden>
  <video id="iv" poster="intro.jpg" muted playsinline webkit-playsinline preload="auto"><source src="intro.mp4" type="video/mp4"></video>
  <div class="ishade"></div>
@@ -114,7 +117,7 @@ if (!welcomed) view = 'menu';
 let prevView = 'menu';
 const $ = s => document.querySelector(s);
 const prod = id => MENU.find(x => x.id == id);
-const items = () => cart.map(l => { const m = prod(l.id); return m ? { ...m, qty: l.qty, opts: l.opts || [], note: l.note || '', k: l.k } : null; }).filter(Boolean);
+const items = () => cart.map(l => { const m = prod(l.id); return m ? { ...m, price: unitPrice(m, l.opts || []), qty: l.qty, opts: l.opts || [], note: l.note || '', k: l.k } : null; }).filter(Boolean);
 const count = () => items().reduce((a, i) => a + i.qty, 0);
 const sub = () => items().reduce((a, i) => a + i.price * i.qty, 0);
 const FEE = 0.5;
@@ -129,20 +132,30 @@ function addLine(id, opts, note) {
 }
 function lineQty(k, d) { const l = cart.find(x => x.k === k); if (!l) return; l.qty += d; if (l.qty <= 0) cart = cart.filter(x => x !== l); saveCart(); render(); }
 function prodMinus(id) { const ls = cart.filter(l => l.id == id); if (ls.length) lineQty(ls[ls.length - 1].k, -1); }
-function plus(id) { const m = prod(id); if (m && (m.opts || []).some(g => OPTION_GROUPS[g])) openSheet(id); else addLine(id); }
+function plus(id) { const m = prod(id); if (m && (m.opts || []).some(g => GROUPS[g])) openSheet(id); else addLine(id); }
 function setNote(k, v) { const l = cart.find(x => x.k === k); if (l) { l.note = v.slice(0, 120); saveCart(); } }
 const pic = m => m.img ? `<img src="${m.img}" alt="">` : esc(m.emoji || '🍽');
 /* option sheet: pick sugar / salt / ... + a free note before adding */
 let sheet = null;
-function openSheet(id) { const m = prod(id); sheet = { id, sel: {}, note: '' }; (m.opts || []).forEach(g => { if (OPTION_GROUPS[g]) sheet.sel[g] = OPTION_GROUPS[g].def; }); render(); }
-function pick(g, v) { sheet.sel[g] = v; render(); }
+function defSel(G) { return G.multi ? [] : (G.choices.some(c => c.n === G.def) ? G.def : G.choices[0].n); }
+function openDetail(id) { openSheet(id); }
+function openSheet(id) {
+  const m = prod(id); sheet = { id, sel: {}, note: '', gal: null, gi: 0 };
+  (m.opts || []).forEach(g => { if (GROUPS[g]) sheet.sel[g] = defSel(GROUPS[g]); });
+  if (m.ng > 0) galGet(id, a => { if (sheet && sheet.id === id) { sheet.gal = a; render(); } });
+  render();
+}
+function pick(g, i) { const G = GROUPS[g], c = G.choices[i].n; if (G.multi) { const a = sheet.sel[g], k = a.indexOf(c); if (k < 0) a.push(c); else a.splice(k, 1); } else sheet.sel[g] = c; render(); }
+function sheetOpts(m) { const o = []; (m.opts || []).forEach(g => { if (!GROUPS[g]) return; const v = sheet.sel[g]; if (Array.isArray(v)) o.push(...v); else o.push(v); }); return o; }
 function closeSheet() { sheet = null; render(); }
-function confirmSheet() { const m = prod(sheet.id); const opts = (m.opts || []).filter(g => OPTION_GROUPS[g]).map(g => sheet.sel[g]); const note = sheet.note; sheet = null; addLine(m.id, opts, note); }
+function confirmSheet() { const m = prod(sheet.id); const opts = sheetOpts(m); const note = sheet.note; sheet = null; addLine(m.id, opts, note); }
+function galScroll(el) { if (!sheet) return; const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth)); if (i === sheet.gi) return; sheet.gi = i; document.querySelectorAll('.gd span').forEach((s, k) => s.classList.toggle('on', k === i)); }
 function sheetHtml() {
   if (!sheet) return '';
-  const m = prod(sheet.id);
-  return `<div class="ov" onclick="if(event.target===this)closeSheet()"><div class="sh"><div class="row"><b style="font-size:17px">${esc(pname(m))}</b><span class="price">${money(m.price)}</span></div>
-  ${(m.opts || []).filter(g => OPTION_GROUPS[g]).map(g => `<label>${esc(tr(OPTION_GROUPS[g].name))}</label><div class="opts">${OPTION_GROUPS[g].choices.map(c => `<button class="oc ${sheet.sel[g] === c ? 'on' : ''}" onclick="pick('${g}','${c}')">${esc(tr(c))}</button>`).join('')}</div>`).join('')}
+  const m = prod(sheet.id), list = (m.ng > 0 && sheet.gal && sheet.gal.length) ? sheet.gal : (m.img ? [m.img] : []);
+  const gal = (m.ng > 0 && list.length) ? `<div class="gal" onscroll="galScroll(this)">${list.map(s => `<img src="${s}" alt="">`).join('')}</div>${list.length > 1 ? `<div class="gd">${list.map((s, k) => `<span class="${k === sheet.gi ? 'on' : ''}"></span>`).join('')}</div>` : ''}` : '';
+  return `<div class="ov" onclick="if(event.target===this)closeSheet()"><div class="sh">${gal}<div class="row"><b style="font-size:17px">${esc(pname(m))}</b><span class="price">${money(unitPrice(m, sheetOpts(m)))}</span></div>
+  ${(m.opts || []).filter(g => GROUPS[g]).map(g => { const G = GROUPS[g]; return `<label>${esc(tr(G.name))}${G.multi ? ' <small style="opacity:.6">(' + t('multi') + ')</small>' : ''}</label><div class="opts">${G.choices.map((c, i) => { const on = Array.isArray(sheet.sel[g]) ? sheet.sel[g].includes(c.n) : sheet.sel[g] === c.n; return `<button class="oc ${on ? 'on' : ''}" onclick="pick('${g}',${i})">${esc(tr(c.n))}${c.p ? ' +' + money(c.p) : ''}</button>`; }).join('')}</div>`; }).join('')}
   <label>${t('sheet_note')}</label><input class="inp" style="direction:inherit;text-align:start" maxlength="120" value="${esc(sheet.note)}" oninput="sheet.note=this.value" placeholder="${esc(t('sheet_ph'))}">
   <button class="btn" style="width:100%;margin-top:14px;padding:14px" onclick="confirmSheet()">${t('add')}</button></div></div>`;
 }
@@ -165,7 +178,7 @@ function vMenu() {
   <span class="online">${cloudOn() ? t('online') : t('local')}</span>
   <input class="search" placeholder="${esc(t('search'))}" value="${esc(term)}" oninput="term=this.value;render(true)">
   <div class="chips">${['all', ...Object.keys(CATS)].map(c => `<div class="chip ${cat === c ? 'on' : ''}" onclick="cat='${c}';render()">${c === 'all' ? t('all') : esc(cname(c))}</div>`).join('')}</div>
-  <div class="grid">${list.map(m => `<div class="item"><div class="pic">${pic(m)}</div><div class="in"><b>${esc(pname(m))}</b><div class="row"><span class="price">${money(m.price)}</span>${qtyCtl(m.id)}</div></div></div>`).join('') || '<div class="empty" style="grid-column:1/-1">' + t('none') + '</div>'}</div>${nav()}${sheetHtml()}`;
+  <div class="grid">${list.map(m => `<div class="item"><div class="pic" ${m.ng > 0 ? `onclick="openDetail(${m.id})" style="cursor:pointer"` : ''}>${pic(m)}${m.ng > 0 ? `<span class="gb">🖼 ${m.ng}</span>` : ''}</div><div class="in"><b>${esc(pname(m))}</b><div class="row"><span class="price">${money(m.price)}</span>${qtyCtl(m.id)}</div></div></div>`).join('') || '<div class="empty" style="grid-column:1/-1">' + t('none') + '</div>'}</div>${nav()}${sheetHtml()}`;
 }
 function vCart() {
   const it = items();
@@ -303,6 +316,7 @@ function render(keepFocus) {
   const a = $('#app'); const f = document.activeElement && document.activeElement.className === 'search';
   const cm = $('#cmsg'), cmv = cm ? cm.value : '', cmf = cm && document.activeElement === cm;
   a.innerHTML = { menu: vMenu, cart: vCart, track: vTrack, chat: vChat, lang: vLang, welcome: vWelcome }[view]();
+  const gl = $('.gal'); if (gl && sheet) gl.scrollLeft = sheet.gi * gl.clientWidth;
   const c2 = $('#cmsg'); if (c2) { c2.value = cmv; if (cmf) c2.focus(); }
   if (f) { const i = $('.search'); i.focus(); i.setSelectionRange(term.length, term.length); }
 }

@@ -63,13 +63,47 @@ let _cfg = null, _cref = null, _cfgReady = false;
 function cfgReady() { return _cfgReady; }
 function normCfg(c) {
   if (!c || !c.v) { if (!c || !c.menu) c = clone(DEFAULT_CFG); }
-  c.cats = c.cats || {}; c.menu = c.menu || []; c.zones = c.zones || []; c.waiters = c.waiters || []; c.brand = c.brand || {}; c.catTr = c.catTr || {}; c.pin = c.pin || '1234';
+  c.cats = c.cats || {}; c.menu = c.menu || []; c.zones = c.zones || []; c.waiters = c.waiters || []; c.brand = c.brand || {}; c.catTr = c.catTr || {}; c.groups = c.groups || []; c.pin = c.pin || '1234';
   c.zones.forEach(z => { z.tables = z.tables || []; });
-  c.menu.forEach(m => { m.opts = m.opts || []; });
+  c.menu.forEach(m => { m.opts = m.opts || []; m.ng = m.ng || 0; });
   return c;
 }
+/* ---- option groups: built-ins (sugar/salt/ice/size) can be edited, admin can add more. Choice price delta = p ---- */
+const GROUPS = {}, CUSTTR = {}, GAL = {};
+function rebuildGroups(c) {
+  Object.keys(GROUPS).forEach(k => delete GROUPS[k]); Object.keys(CUSTTR).forEach(k => delete CUSTTR[k]);
+  Object.keys(OPTION_GROUPS).forEach(id => { const o = OPTION_GROUPS[id]; GROUPS[id] = { id, name: o.name, tr: {}, multi: false, def: o.def, builtin: true, choices: o.choices.map(n => ({ n, tr: {}, p: 0 })) }; });
+  (c.groups || []).forEach(g => {
+    if (!g || !g.id || !g.name || !Array.isArray(g.choices)) return;
+    const ch = g.choices.filter(x => x && x.n).map(x => ({ n: String(x.n), tr: x.tr || {}, p: +x.p || 0 }));
+    if (!ch.length) return;
+    GROUPS[g.id] = { id: g.id, name: g.name, tr: g.tr || {}, multi: !!g.multi, def: g.def || '', builtin: !!OPTION_GROUPS[g.id], choices: ch };
+  });
+  const reg = (n, t) => { if (t && (t.en || t.es || t.fr)) CUSTTR[n] = t; };
+  Object.keys(GROUPS).forEach(k => { const g = GROUPS[k]; reg(g.name, g.tr); g.choices.forEach(x => reg(x.n, x.tr)); });
+}
+const grp = id => GROUPS[id];
+/* price added by the chosen options (opts = array of Arabic choice names) */
+function optExtra(m, opts) { let s = 0; (m.opts || []).forEach(g => { const G = GROUPS[g]; if (G) G.choices.forEach(c => { if ((opts || []).includes(c.n)) s += c.p; }); }); return Math.round(s * 100) / 100; }
+function unitPrice(m, opts) { return Math.round((m.price + optExtra(m, opts)) * 100) / 100; }
+/* extra product photos live in their own node so the menu itself stays small */
+const GKEY = 'smt_gal_v1';
+function galLocal() { try { return JSON.parse(localStorage.getItem(GKEY)) || {}; } catch (e) { return {}; } }
+function galGet(id, cb) {
+  if (GAL[id]) return cb(GAL[id]);
+  if (typeof firebase !== 'undefined' && _ref) {
+    firebase.database().ref('smt_gal/' + id).once('value').then(s => { GAL[id] = s.val() || []; cb(GAL[id]); }, () => cb([]));
+  } else { GAL[id] = galLocal()[id] || []; cb(GAL[id]); }
+}
+function galSet(id, arr, done, fail) {
+  const ok = () => { GAL[id] = arr || []; done && done(); };
+  if (typeof firebase !== 'undefined' && _ref) {
+    const r = firebase.database().ref('smt_gal/' + id);
+    (arr && arr.length ? r.set(arr) : r.remove()).then(ok, e => fail && fail(e));
+  } else { const g = galLocal(); if (arr && arr.length) g[id] = arr; else delete g[id]; try { localStorage.setItem(GKEY, JSON.stringify(g)); } catch (e) { return fail && fail(e); } ok(); }
+}
 function applyCfg(c) {
-  _cfg = c;
+  _cfg = c; rebuildGroups(c);
   Object.keys(CATS).forEach(k => delete CATS[k]); Object.assign(CATS, c.cats);
   Object.keys(CATTR).forEach(k => delete CATTR[k]); Object.assign(CATTR, c.catTr || {});
   MENU.length = 0; c.menu.forEach(m => MENU.push(m));

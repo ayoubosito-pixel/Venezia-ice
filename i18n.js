@@ -15,6 +15,7 @@ const I18N = {
     cart_title: 'مراجعة السلة', n_items: '{0} عناصر', cart_empty: 'السلة فارغة', remove: 'حذف', line_note: '📝 ملاحظة على هذا الصنف...',
     order_note: '📝 ملاحظة على الطلب كاملًا (اختياري)', order_note_ph: 'مثال: أريد كل شيء معًا، حساسية من المكسرات...',
     subtotal: 'المجموع الفرعي', fee: 'رسوم الخدمة', total: 'الإجمالي', pay_note: '💡 الدفع يتم بعد انتهائك عبر النادل: كاش أو بجهاز البطاقة.', send: 'إرسال الطلب للنادل ✓',
+    multi: 'اختر أكثر من واحد',
     sheet_note: 'ملاحظة خاصة بهذا الصنف (اختياري)', sheet_ph: 'مثال: ساخن جدًا، بدون حليب...', add: 'أضف للسلة',
     t_empty: 'السلة فارغة', t_sending: 'جاري الإرسال...', t_fail: 'تعذر الإرسال، تحقق من الاتصال بالإنترنت', t_cash: 'تم إبلاغ النادل — جهّز المبلغ', t_card: 'تم إبلاغ النادل — سيحضر جهاز الدفع', t_called: 'تم إبلاغ النادل 🙋', t_sendfail: 'تعذر الإرسال',
     loading: '⏳ جاري التحميل...', my_orders: 'طلبي', thanks: '✅ تم الدفع، شكرًا لزيارتكم', no_order: 'لا يوجد طلب نشط', new_order: 'طلب جديد',
@@ -33,6 +34,7 @@ const I18N = {
     cart_title: 'Your cart', n_items: '{0} items', cart_empty: 'Your cart is empty', remove: 'Remove', line_note: '📝 Note for this item...',
     order_note: '📝 Note for the whole order (optional)', order_note_ph: 'e.g. bring everything together, nut allergy...',
     subtotal: 'Subtotal', fee: 'Service fee', total: 'Total', pay_note: '💡 You pay at the end through your waiter: cash or card machine.', send: 'Send order to the waiter ✓',
+    multi: 'choose any',
     sheet_note: 'Note for this item (optional)', sheet_ph: 'e.g. very hot, no milk...', add: 'Add to cart',
     t_empty: 'Your cart is empty', t_sending: 'Sending...', t_fail: 'Could not send, check your internet connection', t_cash: 'Waiter notified — please prepare the cash', t_card: 'Waiter notified — they will bring the card machine', t_called: 'Waiter notified 🙋', t_sendfail: 'Could not send',
     loading: '⏳ Loading...', my_orders: 'My order', thanks: '✅ Paid, thank you for visiting us', no_order: 'No active order', new_order: 'New order',
@@ -51,6 +53,7 @@ const I18N = {
     cart_title: 'Tu cesta', n_items: '{0} artículos', cart_empty: 'La cesta está vacía', remove: 'Quitar', line_note: '📝 Nota para este producto...',
     order_note: '📝 Nota para todo el pedido (opcional)', order_note_ph: 'Ej.: todo junto, alergia a los frutos secos...',
     subtotal: 'Subtotal', fee: 'Cargo por servicio', total: 'Total', pay_note: '💡 El pago se hace al final con el camarero: efectivo o datáfono.', send: 'Enviar pedido al camarero ✓',
+    multi: 'elige varios',
     sheet_note: 'Nota para este producto (opcional)', sheet_ph: 'Ej.: muy caliente, sin leche...', add: 'Añadir a la cesta',
     t_empty: 'La cesta está vacía', t_sending: 'Enviando...', t_fail: 'No se pudo enviar, revisa tu conexión a internet', t_cash: 'Camarero avisado — prepara el efectivo', t_card: 'Camarero avisado — traerá el datáfono', t_called: 'Camarero avisado 🙋', t_sendfail: 'No se pudo enviar',
     loading: '⏳ Cargando...', my_orders: 'Mi pedido', thanks: '✅ Pagado, gracias por su visita', no_order: 'No hay pedido activo', new_order: 'Nuevo pedido',
@@ -69,6 +72,7 @@ const I18N = {
     cart_title: 'Votre panier', n_items: '{0} articles', cart_empty: 'Le panier est vide', remove: 'Retirer', line_note: '📝 Remarque pour ce produit...',
     order_note: '📝 Remarque pour toute la commande (facultatif)', order_note_ph: 'Ex. : tout ensemble, allergie aux noix...',
     subtotal: 'Sous-total', fee: 'Frais de service', total: 'Total', pay_note: '💡 Le paiement se fait à la fin auprès du serveur : espèces ou terminal de carte.', send: 'Envoyer la commande au serveur ✓',
+    multi: 'plusieurs choix',
     sheet_note: 'Remarque pour ce produit (facultatif)', sheet_ph: 'Ex. : très chaud, sans lait...', add: 'Ajouter au panier',
     t_empty: 'Le panier est vide', t_sending: 'Envoi en cours...', t_fail: 'Envoi impossible, vérifiez votre connexion internet', t_cash: 'Serveur prévenu — préparez les espèces', t_card: 'Serveur prévenu — il apporte le terminal de carte', t_called: 'Serveur prévenu 🙋', t_sendfail: 'Envoi impossible',
     loading: '⏳ Chargement...', my_orders: 'Ma commande', thanks: '✅ Payé, merci de votre visite', no_order: 'Aucune commande en cours', new_order: 'Nouvelle commande',
@@ -108,7 +112,7 @@ function setLang(l) {
 }
 function t(k) { let s = (I18N[LANG] && I18N[LANG][k]) || I18N.ar[k] || k; for (let i = 1; i < arguments.length; i++) s = s.split('{' + (i - 1) + '}').join(arguments[i]); return s; }
 /* translate a canonical Arabic string (option, quick message...) */
-function tr(ar) { return LANG === 'ar' ? ar : ((TR[ar] && TR[ar][LANG]) || ar); }
+function tr(ar) { return LANG === 'ar' ? ar : ((CUSTTR[ar] && CUSTTR[ar][LANG]) || (TR[ar] && TR[ar][LANG]) || ar); }
 function pname(m) { return LANG === 'ar' ? m.name : ((m.tr && m.tr[LANG]) || tr(m.name)); }
 function cname(id) { return LANG === 'ar' ? CATS[id] : ((CATTR[id] && CATTR[id][LANG]) || tr(CATS[id])); }
 function iname(i) { const m = MENU.find(x => x.id == i.id); return m ? pname(m) : tr(i.name); }
